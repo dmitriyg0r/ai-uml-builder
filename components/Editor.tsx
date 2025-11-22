@@ -48,7 +48,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange }) => {
   };
 
   return (
-    <div className="relative h-full flex flex-col group">
+    <div className="relative h-full flex flex-col group overflow-hidden">
       <div className="bg-slate-900 text-slate-400 text-xs px-4 py-2 font-mono flex justify-between items-center border-b border-slate-800 select-none">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-red-500 opacity-60"></span>
@@ -59,7 +59,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange }) => {
         <span className="text-[10px] opacity-50">LIVE EDIT</span>
       </div>
       
-      <div className="flex-1 overflow-auto bg-[#282a36] scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+      <div className="flex-1 overflow-auto bg-[#282a36] scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent">
         <Editor
           value={value}
           onValueChange={onChange}
@@ -69,7 +69,9 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange }) => {
             fontFamily: '"Fira Code", "Fira Mono", monospace',
             fontSize: 13,
             backgroundColor: '#282a36', 
+            height: '100%',
             minHeight: '100%',
+            maxHeight: '100%',
             color: '#f8f8f2'
           }}
           textareaClassName="focus:outline-none"

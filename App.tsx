@@ -273,9 +273,9 @@ const App: React.FC = () => {
     <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-visible relative">
       {/* Sidebar / Chat Area */}
       <div
-        className={`absolute md:static inset-y-0 left-0 w-full md:w-[340px] lg:w-[380px] flex flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 transform transition-transform duration-300 ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-        }`}
+        className={`${
+          isSidebarOpen ? 'flex' : 'hidden'
+        } absolute md:static inset-y-0 left-0 w-full md:w-[340px] lg:w-[380px] flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 transform transition-transform duration-300`}
       >
 
         {/* Header */}
@@ -409,9 +409,9 @@ const App: React.FC = () => {
           )}
 
           {activeSidebarTab === 'code' && (
-            <div className="flex-1 flex flex-col min-h-0">
-              <div className="h-full border-t border-slate-200 flex flex-col min-h-0">
-                 <div className="flex-1 min-h-0 overflow-auto">
+            <div className="flex-1 flex flex-col min-h-0 min-w-0">
+              <div className="h-full border-t border-slate-200 flex flex-col min-h-0 min-w-0">
+                 <div className="flex-1 min-h-0 min-w-0 overflow-auto overflow-x-auto">
                    <Editor value={currentCode} onChange={setCurrentCode} />
                  </div>
               </div>
@@ -425,6 +425,15 @@ const App: React.FC = () => {
         {/* Toolbar */}
         <div className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10 overflow-visible">
           <div className="flex items-center space-x-4">
+            {!isSidebarOpen && (
+              <button
+                onClick={() => setIsSidebarOpen(true)}
+                className="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 hover:text-blue-600 transition-colors"
+                title="Показать панель"
+              >
+                Открыть панель
+              </button>
+            )}
             <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">Холст</span>
             {isDebouncing && (
                  <div className="flex items-center gap-2 text-xs text-blue-500 animate-pulse">
