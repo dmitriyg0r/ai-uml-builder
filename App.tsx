@@ -100,6 +100,11 @@ const App: React.FC = () => {
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('chat');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
+  // Memoize setError to prevent MermaidRenderer re-renders
+  const handleError = useCallback((err: string | null) => {
+    setError(err);
+  }, []);
+
   const [currentCode, setCurrentCode] = useLocalStorageState<string>('uml:code', '');
   const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 800);
 
@@ -296,7 +301,7 @@ const App: React.FC = () => {
       <div
         className={`${
           isSidebarOpen ? 'flex' : 'hidden'
-        } absolute md:static inset-y-0 left-0 w-full md:w-[340px] lg:w-[380px] flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 transform transition-transform duration-300`}
+        } absolute md:static inset-y-0 left-0 w-full md:w-[380px] flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 shrink-0`}
       >
 
         {/* Header */}
@@ -349,11 +354,12 @@ const App: React.FC = () => {
         </div>
 
         {/* Tabs content */}
-        <div className="flex-1 flex flex-col">
-          {activeSidebarTab === 'chat' && (
-            <>
-              {/* Chat History */}
-              <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className={`flex-1 flex flex-col min-h-0 ${
+            activeSidebarTab === 'chat' ? 'flex' : 'hidden'
+          }`}>
+            {/* Chat History */}
+            <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
                 {messages.length === 0 && (
                   <div className="text-center mt-10 text-slate-400 text-sm px-4">
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -464,21 +470,20 @@ const App: React.FC = () => {
                     {error}
                   </div>
                 )}
-              </div>
-            </>
-          )}
-
-          {activeSidebarTab === 'code' && (
-            <div className="flex-1 flex flex-col min-h-0 min-w-0">
-              <div className="h-full border-t border-slate-200 flex flex-col min-h-0 min-w-0">
-                 <div className="flex-1 min-h-0 min-w-0">
-                   <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
-                     <Editor value={currentCode} onChange={handleCodeChange} />
-                   </Suspense>
-                 </div>
-              </div>
             </div>
-          )}
+          </div>
+
+          <div className={`flex-1 flex flex-col min-h-0 min-w-0 ${
+            activeSidebarTab === 'code' ? 'flex' : 'hidden'
+          }`}>
+            <div className="h-full border-t border-slate-200 flex flex-col min-h-0 min-w-0">
+               <div className="flex-1 min-h-0 min-w-0">
+                 <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
+                   <Editor value={currentCode} onChange={handleCodeChange} />
+                 </Suspense>
+               </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -595,7 +600,7 @@ const App: React.FC = () => {
              <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
                <MermaidRenderer 
                   code={renderedCode} 
-                  onError={(err) => setError(err)}
+                  onError={handleError}
                />
              </Suspense>
            </div>
