@@ -41,10 +41,14 @@ interface ChatMessage {
   text: string;
 }
 
+type SidebarTab = 'chat' | 'code';
+
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('chat');
   
   // `currentCode` is the raw text in the editor
   const [currentCode, setCurrentCode] = useState<string>('');
@@ -209,101 +213,149 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-hidden">
+    <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-hidden relative">
       {/* Sidebar / Chat Area */}
-      <div className="w-full md:w-1/3 lg:w-1/4 flex flex-col border-r border-slate-200 bg-white z-10 shadow-lg h-full">
-        
+      <div
+        className={`absolute md:static inset-y-0 left-0 w-full md:w-[340px] lg:w-[380px] flex flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 transform transition-transform duration-300 ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+
         {/* Header */}
-        <div className="p-4 border-b border-slate-100 shrink-0">
-          <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-            AI UML Builder
-          </h1>
-          <p className="text-slate-500 text-xs mt-1">Gemini 2.5 • Iterative Mode</p>
-        </div>
-
-        {/* Chat History */}
-        <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-          {messages.length === 0 && (
-            <div className="text-center mt-10 text-slate-400 text-sm px-4">
-              <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                <SparklesIcon />
-              </div>
-              <p>Опишите желаемую диаграмму, чтобы начать.</p>
-              <p className="mt-2 text-xs">Например: "Схема регистрации пользователя"</p>
+        <div className="p-4 border-b border-slate-100 shrink-0 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                AI UML Builder
+              </h1>
+              <p className="text-slate-500 text-xs mt-1">Gemini 2.5 • Iterative Mode</p>
             </div>
-          )}
-          
-          {messages.map((msg) => (
-            <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`flex max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-2`}>
-                <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-                  msg.role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-600'
-                }`}>
-                  {msg.role === 'user' ? <UserIcon /> : <SparklesIcon />}
-                </div>
-                <div className={`p-3 rounded-lg text-sm shadow-sm ${
-                  msg.role === 'user' 
-                    ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none' 
-                    : 'bg-blue-50 border border-blue-100 text-slate-800 rounded-tl-none'
-                }`}>
-                  {msg.text}
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {isLoading && (
-            <div className="flex justify-start w-full">
-              <div className="flex max-w-[85%] items-start gap-2">
-                <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1">
-                  <SparklesIcon />
-                </div>
-                <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg rounded-tl-none shadow-sm">
-                   <LoadingSpinner />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Code Editor (Collapsed/Mini) */}
-        <div className="h-64 border-t border-b border-slate-200 shrink-0 flex flex-col">
-           {/* Pass currentCode to Editor, updating it instantly triggers useEffect debounce */}
-           <Editor value={currentCode} onChange={setCurrentCode} />
-        </div>
-
-        {/* Input Area */}
-        <div className="p-4 bg-white shrink-0">
-          <div className="relative">
-            <textarea
-              id="prompt"
-              className="w-full p-3 pr-12 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[80px]"
-              placeholder={currentCode ? "Добавьте кэширование..." : "Опишите диаграмму..."}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={handleKeyDown}
-            />
             <button
-              onClick={handleGenerate}
-              disabled={isLoading || !prompt.trim()}
-              className={`
-                absolute bottom-3 right-3 p-2 rounded-lg text-white transition-all transform active:scale-90
-                ${isLoading || !prompt.trim() 
-                  ? 'bg-slate-300 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
-                }
-              `}
-              title="Отправить (Ctrl + Enter)"
+              onClick={() => setIsSidebarOpen(false)}
+              className="inline-flex md:hidden items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 hover:text-blue-600 border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors"
+              title="Скрыть панель"
             >
-              <SendIcon />
+              Скрыть
             </button>
           </div>
-          <div className="text-xs text-slate-400 mt-2 text-center">
-            Используйте <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> для отправки
+
+          {/* Tabs */}
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <button
+              onClick={() => setActiveSidebarTab('chat')}
+              className={`flex-1 px-3 py-2 rounded-lg border transition-colors ${
+                activeSidebarTab === 'chat'
+                  ? 'bg-blue-50 text-blue-600 border-blue-200'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
+              }`}
+            >
+              Чат
+            </button>
+            <button
+              onClick={() => setActiveSidebarTab('code')}
+              className={`flex-1 px-3 py-2 rounded-lg border transition-colors ${
+                activeSidebarTab === 'code'
+                  ? 'bg-blue-50 text-blue-600 border-blue-200'
+                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
+              }`}
+            >
+              Код
+            </button>
           </div>
-          {error && (
-            <div className="mt-2 p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
-              {error}
+        </div>
+
+        {/* Tabs content */}
+        <div className="flex-1 flex flex-col">
+          {activeSidebarTab === 'chat' && (
+            <>
+              {/* Chat History */}
+              <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
+                {messages.length === 0 && (
+                  <div className="text-center mt-10 text-slate-400 text-sm px-4">
+                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                      <SparklesIcon />
+                    </div>
+                    <p>Опишите желаемую диаграмму, чтобы начать.</p>
+                    <p className="mt-2 text-xs">Например: "Схема регистрации пользователя"</p>
+                  </div>
+                )}
+                
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`flex max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-2`}>
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-1 ${
+                        msg.role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-600'
+                      }`}>
+                        {msg.role === 'user' ? <UserIcon /> : <SparklesIcon />}
+                      </div>
+                      <div className={`p-3 rounded-lg text-sm shadow-sm ${
+                        msg.role === 'user' 
+                          ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none' 
+                          : 'bg-blue-50 border border-blue-100 text-slate-800 rounded-tl-none'
+                      }`}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {isLoading && (
+                  <div className="flex justify-start w-full">
+                    <div className="flex max-w-[85%] items-start gap-2">
+                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1">
+                        <SparklesIcon />
+                      </div>
+                      <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg rounded-tl-none shadow-sm">
+                         <LoadingSpinner />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Input Area */}
+              <div className="p-4 bg-white shrink-0 border-t border-slate-200">
+                <div className="relative">
+                  <textarea
+                    id="prompt"
+                    className="w-full p-3 pr-12 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[80px]"
+                    placeholder={currentCode ? "Добавьте кэширование..." : "Опишите диаграмму..."}
+                    value={prompt}
+                    onChange={(e) => setPrompt(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                  />
+                  <button
+                    onClick={handleGenerate}
+                    disabled={isLoading || !prompt.trim()}
+                    className={`
+                      absolute bottom-3 right-3 p-2 rounded-lg text-white transition-all transform active:scale-90
+                      ${isLoading || !prompt.trim() 
+                        ? 'bg-slate-300 cursor-not-allowed' 
+                        : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
+                      }
+                    `}
+                    title="Отправить (Ctrl + Enter)"
+                  >
+                    <SendIcon />
+                  </button>
+                </div>
+                <div className="text-xs text-slate-400 mt-2 text-center">
+                  Используйте <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> для отправки
+                </div>
+                {error && (
+                  <div className="mt-2 p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
+                    {error}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+
+          {activeSidebarTab === 'code' && (
+            <div className="flex-1 flex flex-col">
+              <div className="h-full border-t border-slate-200 flex flex-col">
+                 <Editor value={currentCode} onChange={setCurrentCode} />
+              </div>
             </div>
           )}
         </div>
@@ -323,7 +375,16 @@ const App: React.FC = () => {
             )}
           </div>
           
-          <div className="flex items-center space-x-2 relative" ref={exportMenuRef}>
+          <div className="flex items-center space-x-3 relative">
+             <button
+               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+               className="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 hover:text-blue-600 transition-colors"
+               title={isSidebarOpen ? "Скрыть панель" : "Показать панель"}
+             >
+               {isSidebarOpen ? 'Скрыть панель' : 'Показать панель'}
+             </button>
+
+             <div className="flex items-center space-x-2 relative" ref={exportMenuRef}>
              <button 
                 onClick={() => setShowExportMenu(!showExportMenu)}
                 disabled={!renderedCode}
@@ -352,6 +413,7 @@ const App: React.FC = () => {
                     </button>
                 </div>
              )}
+             </div>
           </div>
         </div>
 
@@ -374,6 +436,14 @@ const App: React.FC = () => {
            </div>
         </div>
       </div>
+
+      {/* Backdrop for mobile sidebar */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-10 md:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
     </div>
   );
 };
