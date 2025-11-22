@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { generateMermaidCode } from './services/geminiService';
 import MermaidRenderer from './components/MermaidRenderer';
 import { Editor } from './components/Editor';
@@ -35,6 +36,12 @@ const RefreshIcon = () => (
     </svg>
 );
 
+const CollapseIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+  </svg>
+);
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'ai';
@@ -59,8 +66,15 @@ const App: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isDebouncing, setIsDebouncing] = useState(false);
   
-  const exportMenuRef = useRef<HTMLDivElement>(null);
+  const exportTriggerRef = useRef<HTMLDivElement>(null);
+  const exportMenuPortalRef = useRef<HTMLDivElement>(null);
+  const exportButtonRef = useRef<HTMLButtonElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const [exportMenuPos, setExportMenuPos] = useState<{ top: number; left: number; width: number }>({
+    top: 0,
+    left: 0,
+    width: 192,
+  });
   
   // Auto scroll to bottom of chat
   useEffect(() => {
@@ -72,7 +86,10 @@ const App: React.FC = () => {
   // Close export menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const insideTrigger = exportTriggerRef.current?.contains(target);
+      const insideMenu = exportMenuPortalRef.current?.contains(target);
+      if (!insideTrigger && !insideMenu) {
         setShowExportMenu(false);
       }
     };
@@ -150,10 +167,20 @@ const App: React.FC = () => {
   };
 
   const handleDownloadSvg = useCallback(() => {
-    const svgElement = document.querySelector('#diagram-container svg');
+    const svgElement = document.querySelector('#mermaid-svg-root svg');
     if (!svgElement) return;
 
-    const svgData = new XMLSerializer().serializeToString(svgElement);
+    const svgClone = svgElement.cloneNode(true) as SVGElement;
+
+    // Ensure namespaces exist for correct export
+    if (!svgClone.getAttribute('xmlns')) {
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+    if (!svgClone.getAttribute('xmlns:xlink')) {
+      svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    }
+
+    const svgData = new XMLSerializer().serializeToString(svgClone);
     const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -167,13 +194,24 @@ const App: React.FC = () => {
   }, []);
 
   const handleDownloadPng = useCallback(() => {
-    const svgElement = document.querySelector('#diagram-container svg');
+    const svgElement = document.querySelector('#mermaid-svg-root svg');
     if (!svgElement) return;
 
+    const viewBox = svgElement.getAttribute('viewBox');
     const rect = svgElement.getBoundingClientRect();
+    const [vbX, vbY, vbW, vbH] = viewBox ? viewBox.split(/\s+/).map(Number) : [0, 0, rect.width, rect.height];
+    const width = vbW || rect.width || 800;
+    const height = vbH || rect.height || 600;
+
     const svgClone = svgElement.cloneNode(true) as SVGElement;
-    svgClone.setAttribute('width', rect.width.toString());
-    svgClone.setAttribute('height', rect.height.toString());
+    svgClone.setAttribute('width', width.toString());
+    svgClone.setAttribute('height', height.toString());
+    if (!svgClone.getAttribute('xmlns')) {
+      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    }
+    if (!svgClone.getAttribute('xmlns:xlink')) {
+      svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    }
     
     const svgData = new XMLSerializer().serializeToString(svgClone);
     
@@ -181,25 +219,29 @@ const App: React.FC = () => {
     const ctx = canvas.getContext('2d');
     const img = new Image();
     const scale = 2; 
-    canvas.width = rect.width * scale;
-    canvas.height = rect.height * scale;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
 
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(svgBlob);
+    const svgBase64 = window.btoa(unescape(encodeURIComponent(svgData)));
+    const url = `data:image/svg+xml;base64,${svgBase64}`;
 
     img.onload = () => {
       if (ctx) {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const pngUrl = canvas.toDataURL('image/png');
-        const link = document.createElement('a');
-        link.href = pngUrl;
-        link.download = `diagram-${Date.now()}.png`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        try {
+          const pngUrl = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.href = pngUrl;
+          link.download = `diagram-${Date.now()}.png`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        } catch (err) {
+          console.error(err);
+          setError('Ошибка при экспорте в PNG. Попробуйте SVG.');
+        }
       }
       setShowExportMenu(false);
     };
@@ -212,8 +254,23 @@ const App: React.FC = () => {
     img.src = url;
   }, []);
 
+  const toggleExportMenu = useCallback(() => {
+    if (!renderedCode) return;
+    if (!showExportMenu) {
+      const rect = exportButtonRef.current?.getBoundingClientRect();
+      const menuWidth = 192;
+      const gap = 8;
+      setExportMenuPos({
+        top: (rect?.bottom || 0) + gap,
+        left: (rect ? rect.right - menuWidth : 0),
+        width: menuWidth,
+      });
+    }
+    setShowExportMenu((prev) => !prev);
+  }, [renderedCode, showExportMenu]);
+
   return (
-    <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-hidden relative">
+    <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-visible relative">
       {/* Sidebar / Chat Area */}
       <div
         className={`absolute md:static inset-y-0 left-0 w-full md:w-[340px] lg:w-[380px] flex flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 transform transition-transform duration-300 ${
@@ -232,10 +289,10 @@ const App: React.FC = () => {
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
-              className="inline-flex md:hidden items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 hover:text-blue-600 border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 transition-colors"
+              className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 transition-colors bg-white shadow-sm"
               title="Скрыть панель"
             >
-              Скрыть
+              <CollapseIcon />
             </button>
           </div>
 
@@ -352,9 +409,11 @@ const App: React.FC = () => {
           )}
 
           {activeSidebarTab === 'code' && (
-            <div className="flex-1 flex flex-col">
-              <div className="h-full border-t border-slate-200 flex flex-col">
-                 <Editor value={currentCode} onChange={setCurrentCode} />
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="h-full border-t border-slate-200 flex flex-col min-h-0">
+                 <div className="flex-1 min-h-0 overflow-auto">
+                   <Editor value={currentCode} onChange={setCurrentCode} />
+                 </div>
               </div>
             </div>
           )}
@@ -362,9 +421,9 @@ const App: React.FC = () => {
       </div>
 
       {/* Main Canvas Area */}
-      <div className="flex-1 bg-slate-50 relative flex flex-col h-full overflow-hidden">
+      <div className="flex-1 bg-slate-50 relative flex flex-col h-full overflow-visible">
         {/* Toolbar */}
-        <div className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10">
+        <div className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10 overflow-visible">
           <div className="flex items-center space-x-4">
             <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">Холст</span>
             {isDebouncing && (
@@ -375,18 +434,11 @@ const App: React.FC = () => {
             )}
           </div>
           
-          <div className="flex items-center space-x-3 relative">
-             <button
-               onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-               className="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 hover:text-blue-600 transition-colors"
-               title={isSidebarOpen ? "Скрыть панель" : "Показать панель"}
-             >
-               {isSidebarOpen ? 'Скрыть панель' : 'Показать панель'}
-             </button>
-
-             <div className="flex items-center space-x-2 relative" ref={exportMenuRef}>
+          <div className="flex items-center space-x-3 relative" ref={exportTriggerRef}>
+             <div className="flex items-center space-x-2 relative">
              <button 
-                onClick={() => setShowExportMenu(!showExportMenu)}
+                ref={exportButtonRef}
+                onClick={toggleExportMenu}
                 disabled={!renderedCode}
                 className="px-3 py-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
                 title="Экспорт диаграммы"
@@ -395,24 +447,36 @@ const App: React.FC = () => {
                <span className="text-sm font-medium">Экспорт</span>
              </button>
 
-             {showExportMenu && (
-                <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-xl border border-slate-100 z-50 py-1 animate-in fade-in zoom-in-95 duration-100 origin-top-right">
-                    <button 
-                        onClick={handleDownloadSvg} 
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
-                    >
-                        <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">SVG</div>
-                        <span>Векторный</span>
-                    </button>
-                    <button 
-                        onClick={handleDownloadPng} 
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
-                    >
-                        <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">PNG</div>
-                        <span>Изображение</span>
-                    </button>
-                </div>
-             )}
+             {showExportMenu &&
+               createPortal(
+                 <div
+                   ref={exportMenuPortalRef}
+                   className="fixed bg-white rounded-lg shadow-xl border border-slate-100 z-[9999] py-1"
+                   style={{
+                     top: `${exportMenuPos.top}px`,
+                     left: `${exportMenuPos.left}px`,
+                     width: `${exportMenuPos.width}px`,
+                   }}
+                   onClick={(e) => e.stopPropagation()}
+                 >
+                     <button 
+                         onClick={handleDownloadSvg} 
+                         className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
+                     >
+                         <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">SVG</div>
+                         <span>Векторный</span>
+                     </button>
+                     <button 
+                         onClick={handleDownloadPng} 
+                         className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
+                     >
+                         <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">PNG</div>
+                         <span>Изображение</span>
+                     </button>
+                 </div>,
+                 document.body
+               )
+             }
              </div>
           </div>
         </div>

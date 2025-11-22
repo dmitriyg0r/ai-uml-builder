@@ -116,6 +116,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ code, onError }) => {
               contentStyle={{ width: "100%", height: "100%" }}
             >
               <div 
+                id="mermaid-svg-root"
                 className="w-full h-full flex items-center justify-center p-10"
                 dangerouslySetInnerHTML={{ __html: svg }}
               />

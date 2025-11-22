@@ -1,10 +1,3 @@
-import { GoogleGenAI } from "@google/genai";
-
-// Initialize the client with the API key from environment variables
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-const MODEL_NAME = 'gemini-2.5-flash';
-
 const SYSTEM_INSTRUCTION = `
 You are an expert software architect and UML diagram generator. 
 Your task is to convert user descriptions into valid Mermaid.js syntax OR update existing Mermaid.js code based on user feedback.
@@ -60,19 +53,50 @@ INSTRUCTION: Update the existing code above based on the user request. Return th
 `;
     }
 
-    const response = await ai.models.generateContent({
-      model: MODEL_NAME,
-      contents: finalPrompt,
-      config: {
-        systemInstruction: SYSTEM_INSTRUCTION,
-        temperature: 0.2, // Low temperature for deterministic code generation
+    const apiKey =
+      // Vite standard prefix
+      import.meta.env.VITE_POLZA_API_KEY ||
+      import.meta.env.VITE_API_KEY ||
+      // Optional non-prefixed (if injected via define)
+      import.meta.env.POLZA_API_KEY ||
+      import.meta.env.API_KEY ||
+      process.env.POLZA_API_KEY ||
+      process.env.API_KEY;
+
+    if (!apiKey) {
+      throw new Error('POLZA_API_KEY is not set. Add it to your environment (e.g., VITE_POLZA_API_KEY).');
+    }
+
+    const response = await fetch('https://api.polza.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-chat',
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: SYSTEM_INSTRUCTION },
+          { role: 'user', content: finalPrompt },
+        ],
+      }),
     });
 
-    const text = response.text;
-    
-    if (!text) {
-      throw new Error("No response generated from Gemini.");
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Polza API error: ${response.status} ${response.statusText} – ${errorText}`);
+    }
+
+    const completion = await response.json();
+
+    const text =
+      completion?.choices?.[0]?.message?.content ||
+      completion?.choices?.[0]?.message?.text ||
+      '';
+
+    if (!text.trim()) {
+      throw new Error("No response generated from Polza AI.");
     }
 
     // Robust cleanup of markdown code blocks
