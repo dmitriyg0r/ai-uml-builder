@@ -1,16 +1,25 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { generateMermaidCode } from './services/geminiService';
-import MermaidRenderer from './components/MermaidRenderer';
-import { Editor } from './components/Editor';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { ConfirmationModal } from './components/ConfirmationModal';
 import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
+import { useDiagramExport } from './hooks/useDiagramExport';
+
+const MermaidRenderer = React.lazy(() => import('./components/MermaidRenderer'));
+const Editor = React.lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
 
 // Icons
 const SendIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+  </svg>
+);
+
+const StopIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+    <rect x="6" y="6" width="12" height="12" rx="2" />
   </svg>
 );
 
@@ -89,6 +98,7 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('chat');
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
 
   const [currentCode, setCurrentCode] = useLocalStorageState<string>('uml:code', '');
   const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 800);
@@ -97,6 +107,7 @@ const App: React.FC = () => {
   const [messages, setMessages] = useLocalStorageState<ChatMessage[]>('uml:messages', []);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
 
+  const abortControllerRef = useRef<AbortController | null>(null);
   const exportTriggerRef = useRef<HTMLDivElement>(null);
   const exportMenuPortalRef = useRef<HTMLDivElement>(null);
   const exportButtonRef = useRef<HTMLButtonElement>(null);
@@ -107,6 +118,9 @@ const App: React.FC = () => {
     left: 0,
     width: 192,
   });
+
+  const { exportDiagram, isExporting } = useDiagramExport({ setError });
+
   const hasDiagram = Boolean(renderedCode.trim());
   const hasHistory = messages.length > 0;
   const canReset = Boolean(currentCode || prompt || hasHistory);
@@ -150,8 +164,15 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    // Create new AbortController
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
-      const mermaidCode = await generateMermaidCode(trimmed, renderedCode || currentCode);
+      const mermaidCode = await generateMermaidCode(trimmed, renderedCode || currentCode, controller.signal);
       setCurrentCode(mermaidCode);
       flush(mermaidCode);
 
@@ -161,7 +182,11 @@ const App: React.FC = () => {
         text: isUpdate ? 'Диаграмма обновлена.' : 'Диаграмма создана.',
       };
       setMessages((prev) => [...prev, aiMessage]);
-    } catch (err) {
+    } catch (err: any) {
+      if (err.name === 'AbortError') {
+        console.log('Generation aborted');
+        return;
+      }
       const message = err instanceof Error ? err.message : 'Не удалось сгенерировать диаграмму.';
       console.error(err);
       setError(message);
@@ -174,8 +199,17 @@ const App: React.FC = () => {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   }, [prompt, isLoading, renderedCode, currentCode, setCurrentCode, flush]);
+
+  const handleStop = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+      setIsLoading(false);
+    }
+  }, []);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -183,96 +217,6 @@ const App: React.FC = () => {
       handleGenerate();
     }
   };
-
-  const exportDiagram = useCallback(
-    (format: 'svg' | 'png') => {
-      const svgElement = document.querySelector<SVGSVGElement>('#mermaid-svg-root svg');
-      if (!svgElement) {
-        setError('Диаграмма не найдена. Сначала сгенерируйте её.');
-        setShowExportMenu(false);
-        return;
-      }
-
-      const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
-      if (!svgClone.getAttribute('xmlns')) {
-        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-      }
-      if (!svgClone.getAttribute('xmlns:xlink')) {
-        svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-      }
-
-      const svgData = new XMLSerializer().serializeToString(svgClone);
-      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-
-      if (format === 'svg') {
-        const url = URL.createObjectURL(svgBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `diagram-${Date.now()}.svg`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-        setShowExportMenu(false);
-        return;
-      }
-
-      const url = URL.createObjectURL(svgBlob);
-      const img = new Image();
-      img.onload = () => {
-        const viewBox = svgClone.getAttribute('viewBox');
-        const rect = svgElement.getBoundingClientRect();
-        const [, , vbW, vbH] = viewBox ? viewBox.split(/\s+/).map(Number) : [0, 0, rect.width, rect.height];
-        const width = vbW || rect.width || 800;
-        const height = vbH || rect.height || 600;
-
-        const scale = 2;
-        const canvas = document.createElement('canvas');
-        canvas.width = width * scale;
-        canvas.height = height * scale;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          setError('Браузер не поддерживает экспорт в PNG.');
-          URL.revokeObjectURL(url);
-          setShowExportMenu(false);
-          return;
-        }
-
-        ctx.fillStyle = 'white';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            setError('Ошибка при экспорте в PNG. Попробуйте SVG.');
-            URL.revokeObjectURL(url);
-            setShowExportMenu(false);
-            return;
-          }
-
-          const pngUrl = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = pngUrl;
-          link.download = `diagram-${Date.now()}.png`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(pngUrl);
-          URL.revokeObjectURL(url);
-          setShowExportMenu(false);
-        }, 'image/png');
-      };
-
-      img.onerror = () => {
-        setError('Ошибка при экспорте в PNG. Попробуйте SVG.');
-        URL.revokeObjectURL(url);
-        setShowExportMenu(false);
-      };
-
-      img.src = url;
-    },
-    [setError]
-  );
 
   const toggleExportMenu = useCallback(() => {
     if (!hasDiagram) return;
@@ -303,7 +247,7 @@ const App: React.FC = () => {
     }
   }, [renderedCode, currentCode]);
 
-  const handleReset = useCallback(() => {
+  const confirmReset = useCallback(() => {
     setCurrentCode('');
     flush('');
     setMessages([]);
@@ -311,7 +255,14 @@ const App: React.FC = () => {
     setError(null);
     setShowExportMenu(false);
     setCopyState('idle');
+    setIsResetModalOpen(false);
   }, [flush, setCurrentCode, setMessages]);
+
+  const handleResetClick = () => {
+    if (canReset) {
+      setIsResetModalOpen(true);
+    }
+  };
 
   const handleCodeChange = useCallback(
     (value: string) => {
@@ -330,7 +281,17 @@ const App: React.FC = () => {
   }, []);
 
   return (
-    <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-visible relative">
+    <div className="flex h-screen w-full bg-slate-100 text-slate-900 relative overflow-hidden">
+      <ConfirmationModal
+        isOpen={isResetModalOpen}
+        title="Сбросить всё?"
+        message="Это действие удалит текущую диаграмму и историю чата. Отменить это действие нельзя."
+        onConfirm={confirmReset}
+        onCancel={() => setIsResetModalOpen(false)}
+        confirmLabel="Сбросить"
+        isDestructive
+      />
+
       {/* Sidebar / Chat Area */}
       <div
         className={`${
@@ -460,20 +421,32 @@ const App: React.FC = () => {
                     onChange={(e) => setPrompt(e.target.value)}
                     onKeyDown={handleKeyDown}
                   />
-                  <button
-                    onClick={handleGenerate}
-                    disabled={isLoading || !prompt.trim()}
-                    className={`
-                      absolute bottom-3 right-3 p-2 rounded-lg text-white transition-all transform active:scale-90
-                      ${isLoading || !prompt.trim() 
-                        ? 'bg-slate-300 cursor-not-allowed' 
-                        : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
-                      }
-                    `}
-                    title="Отправить (Ctrl + Enter)"
-                  >
-                    <SendIcon />
-                  </button>
+                  {isLoading ? (
+                    <button
+                      onClick={handleStop}
+                      className="absolute bottom-3 right-3 p-2 rounded-lg text-white bg-red-500 hover:bg-red-600 shadow-sm transition-all transform active:scale-90"
+                      title="Остановить генерацию"
+                      aria-label="Остановить генерацию"
+                    >
+                      <StopIcon />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={handleGenerate}
+                      disabled={!prompt.trim()}
+                      className={`
+                        absolute bottom-3 right-3 p-2 rounded-lg text-white transition-all transform active:scale-90
+                        ${!prompt.trim() 
+                          ? 'bg-slate-300 cursor-not-allowed' 
+                          : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
+                        }
+                      `}
+                      title="Отправить (Ctrl + Enter)"
+                      aria-label="Отправить сообщение"
+                    >
+                      <SendIcon />
+                    </button>
+                  )}
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>
@@ -498,8 +471,10 @@ const App: React.FC = () => {
           {activeSidebarTab === 'code' && (
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               <div className="h-full border-t border-slate-200 flex flex-col min-h-0 min-w-0">
-                 <div className="flex-1 min-h-0 min-w-0 overflow-auto overflow-x-auto">
-                   <Editor value={currentCode} onChange={handleCodeChange} />
+                 <div className="flex-1 min-h-0 min-w-0">
+                   <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
+                     <Editor value={currentCode} onChange={handleCodeChange} />
+                   </Suspense>
                  </div>
               </div>
             </div>
@@ -593,10 +568,11 @@ const App: React.FC = () => {
             </div>
 
             <button
-              onClick={handleReset}
+              onClick={handleResetClick}
               disabled={!canReset}
               className="px-3 py-2 text-slate-600 hover:text-red-600 bg-white border border-slate-200 rounded-lg hover:border-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
               title="Сбросить диаграмму и историю"
+              aria-label="Сбросить диаграмму и историю"
             >
               <TrashIcon />
               <span className="text-sm font-medium">Сброс</span>
@@ -616,10 +592,12 @@ const App: React.FC = () => {
            
            <div className="w-full h-full relative z-10">
              {/* Pass renderedCode (debounced) to renderer */}
-             <MermaidRenderer 
-                code={renderedCode} 
-                onError={(err) => setError(err)}
-             />
+             <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
+               <MermaidRenderer 
+                  code={renderedCode} 
+                  onError={(err) => setError(err)}
+               />
+             </Suspense>
            </div>
         </div>
       </div>

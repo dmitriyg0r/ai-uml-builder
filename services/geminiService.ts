@@ -35,7 +35,7 @@ If "EXISTING CODE" is provided:
 4. Return the FULL valid Mermaid code (not just the diff).
 `;
 
-export const generateMermaidCode = async (prompt: string, existingCode?: string): Promise<string> => {
+export const generateMermaidCode = async (prompt: string, existingCode?: string, signal?: AbortSignal): Promise<string> => {
   try {
     let finalPrompt = prompt;
 
@@ -81,6 +81,7 @@ INSTRUCTION: Update the existing code above based on the user request. Return th
           { role: 'user', content: finalPrompt },
         ],
       }),
+      signal,
     });
 
     if (!response.ok) {
