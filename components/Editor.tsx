@@ -1,40 +1,4 @@
 import React from 'react';
-import Editor from 'react-simple-code-editor';
-import Prism from 'prismjs';
-
-// Define a custom robust Mermaid grammar for Prism
-// We define it locally to ensure it works without external loader dependencies
-Prism.languages.mermaid = {
-  'comment': {
-    pattern: /%%.*/,
-    greedy: true
-  },
-  'string': {
-    pattern: /"[^"]*"|'[^']*'/,
-    greedy: true
-  },
-  'keyword': {
-    pattern: /\b(graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|stateDiagram-v2|erDiagram|gantt|pie|mindmap|requirementDiagram|gitGraph|journey|timeline|c4Context|c4Container|c4Component|c4Dynamic|c4Deployment)\b/,
-    greedy: true
-  },
-  'class-name': {
-    pattern: /\b([A-Z][a-zA-Z0-9_]*)\b/,
-    lookbehind: true
-  },
-  'function': {
-    pattern: /\b(subgraph|end|class|participant|actor|style|linkStyle|click|callback)\b/,
-    greedy: true
-  },
-  'arrow': {
-    pattern: /-->|---|--|==>|==|-.->|-\.-|\.\.|\sx\b|\so\b|\s\+\b/,
-    greedy: true
-  },
-  'variable': {
-    pattern: /\[.*?\]|\(.*?\)|\{.*?\}|\{\{.*?\}\}|>.*?\]/,
-    greedy: true
-  },
-  'operator': /:|;|\||<|>/
-};
 
 interface CodeEditorProps {
   value: string;
@@ -42,14 +6,9 @@ interface CodeEditorProps {
 }
 
 export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange }) => {
-  
-  const highlight = (code: string) => {
-    return Prism.highlight(code, Prism.languages.mermaid, 'mermaid');
-  };
-
   return (
-    <div className="relative h-full flex flex-col group overflow-hidden">
-      <div className="bg-slate-900 text-slate-400 text-xs px-4 py-2 font-mono flex justify-between items-center border-b border-slate-800 select-none">
+    <div className="relative h-full flex flex-col overflow-hidden bg-[#282a36]">
+      <div className="bg-slate-900 text-slate-400 text-xs px-4 py-2 font-mono flex justify-between items-center border-b border-slate-800 select-none shrink-0">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-red-500 opacity-60"></span>
           <span className="w-2 h-2 rounded-full bg-yellow-500 opacity-60"></span>
@@ -59,27 +18,23 @@ export const CodeEditor: React.FC<CodeEditorProps> = ({ value, onChange }) => {
         <span className="text-[10px] opacity-50">LIVE EDIT</span>
       </div>
       
-      <div className="flex-1 overflow-auto bg-[#282a36] scrollbar-thin scrollbar-thumb-transparent scrollbar-track-transparent">
-        <Editor
-          value={value}
-          onValueChange={onChange}
-          highlight={highlight}
-          padding={16}
-          style={{
-            fontFamily: '"Fira Code", "Fira Mono", monospace',
-            fontSize: 13,
-            backgroundColor: '#282a36', 
-            height: '100%',
-            minHeight: '100%',
-            maxHeight: '100%',
-            color: '#f8f8f2'
-          }}
-          textareaClassName="focus:outline-none"
-        />
-      </div>
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        spellCheck={false}
+        className="flex-1 w-full bg-transparent text-[#f8f8f2] resize-none focus:outline-none border-none p-4 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-slate-800/50"
+        style={{
+          fontFamily: '"Fira Code", "Fira Mono", Consolas, Monaco, monospace',
+          fontSize: '13px',
+          lineHeight: '1.6',
+          tabSize: 2,
+          MozTabSize: 2,
+        }}
+        placeholder="// Введите Mermaid код здесь..."
+      />
     </div>
   );
 };
 
-// Export alias for backward compatibility if needed, but App imports it as Named
+// Export alias for backward compatibility
 export { CodeEditor as Editor };

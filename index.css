@@ -56,3 +56,18 @@ textarea:focus-visible {
 .scrollbar-track-transparent::-webkit-scrollbar-track {
   background: transparent;
 }
+
+/* Dark theme scrollbar for code editor */
+.scrollbar-thumb-slate-700::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
+}
+
+.scrollbar-thumb-slate-700:hover::-webkit-scrollbar-thumb,
+.scrollbar-thumb-slate-700::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+.scrollbar-track-slate-800\/50::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+}
