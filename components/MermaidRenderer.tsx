@@ -28,7 +28,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ code, onError }) => {
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: false,
-      theme: 'default',
+      theme: 'neutral',
       securityLevel: 'loose',
       fontFamily: 'Inter, sans-serif',
       logLevel: 'error',
@@ -36,25 +36,41 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = ({ code, onError }) => {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const renderDiagram = async () => {
-      if (!code) return;
+      if (!code.trim()) {
+        setSvg('');
+        onError?.('');
+        setIsRendering(false);
+        return;
+      }
 
       setIsRendering(true);
       try {
         const id = `mermaid-${Math.random().toString(36).substring(2, 9)}`;
         const { svg: svgContent } = await mermaid.render(id, code);
-        setSvg(svgContent);
-        if (onError) onError(''); 
+        if (!cancelled) {
+          setSvg(svgContent);
+          onError?.('');
+        }
       } catch (err) {
         console.error('Mermaid rendering error:', err);
-        setSvg(''); 
-        if (onError) onError('Ошибка рендеринга диаграммы. Проверьте синтаксис.');
+        if (!cancelled) {
+          setSvg('');
+          onError?.('Ошибка рендеринга диаграммы. Проверьте синтаксис.');
+        }
       } finally {
-        setIsRendering(false);
+        if (!cancelled) {
+          setIsRendering(false);
+        }
       }
     };
 
     renderDiagram();
+    return () => {
+      cancelled = true;
+    };
   }, [code, onError]);
 
   if (isRendering) {

@@ -4,6 +4,8 @@ import { generateMermaidCode } from './services/geminiService';
 import MermaidRenderer from './components/MermaidRenderer';
 import { Editor } from './components/Editor';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { useLocalStorageState } from './hooks/useLocalStorageState';
+import { useDebouncedValue } from './hooks/useDebouncedValue';
 
 // Icons
 const SendIcon = () => (
@@ -42,6 +44,25 @@ const CollapseIcon = () => (
   </svg>
 );
 
+const CopyIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75A2.25 2.25 0 0 1 11.25 15H18a2.25 2.25 0 0 0 2.25-2.25V6.75A2.25 2.25 0 0 0 18 4.5h-6.75A2.25 2.25 0 0 0 9 6.75v6z" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 8.25H5.25A2.25 2.25 0 0 0 3 10.5v6.75A2.25 2.25 0 0 0 5.25 19.5H12a2.25 2.25 0 0 0 2.25-2.25v-1.5" />
+  </svg>
+);
+
+const TrashIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 9.75v6.75M14.25 9.75v6.75M6 6.75h12m-10.5 0V5.25A1.5 1.5 0 0 1 9 3.75h6a1.5 1.5 0 0 1 1.5 1.5v1.5m-9 0h9m-1.5 0v11.25A1.5 1.5 0 0 1 14.25 21h-4.5A1.5 1.5 0 0 1 8.25 18V6.75" />
+  </svg>
+);
+
+const CodeIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 6 3.75 12l6 6M14.25 6l6 6-6 6" />
+  </svg>
+);
+
 interface ChatMessage {
   id: string;
   role: 'user' | 'ai';
@@ -50,31 +71,45 @@ interface ChatMessage {
 
 type SidebarTab = 'chat' | 'code';
 
+const QUICK_PROMPTS: { label: string; text: string }[] = [
+  { label: 'Регистрация', text: 'Диаграмма последовательности регистрации пользователя с подтверждением email и отправкой SMS-кода' },
+  { label: 'Платеж', text: 'Поток оплаты: выбор товара, выставление счета, оплата картой, webhooks банка, обновление статуса заказа' },
+  { label: 'Микросервисы', text: 'Диаграмма контейнеров: API Gateway, Auth, Billing, Catalog, Notification сервисы и PostgreSQL, Redis, Kafka' },
+  { label: 'Инцидент', text: 'Блок-схема реагирования на инцидент: обнаружение, triage, уведомление on-call, фиксация RCA' },
+];
+
+const createId = () =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : Date.now().toString(36);
+
 const App: React.FC = () => {
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('chat');
-  
-  // `currentCode` is the raw text in the editor
-  const [currentCode, setCurrentCode] = useState<string>('');
-  // `renderedCode` is what gets passed to Mermaid (debounced)
-  const [renderedCode, setRenderedCode] = useState<string>('');
-  
+
+  const [currentCode, setCurrentCode] = useLocalStorageState<string>('uml:code', '');
+  const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 800);
+
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [isDebouncing, setIsDebouncing] = useState(false);
-  
+  const [messages, setMessages] = useLocalStorageState<ChatMessage[]>('uml:messages', []);
+  const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
+
   const exportTriggerRef = useRef<HTMLDivElement>(null);
   const exportMenuPortalRef = useRef<HTMLDivElement>(null);
   const exportButtonRef = useRef<HTMLButtonElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const promptInputRef = useRef<HTMLTextAreaElement>(null);
   const [exportMenuPos, setExportMenuPos] = useState<{ top: number; left: number; width: number }>({
     top: 0,
     left: 0,
     width: 192,
   });
+  const hasDiagram = Boolean(renderedCode.trim());
+  const hasHistory = messages.length > 0;
+  const canReset = Boolean(currentCode || prompt || hasHistory);
   
   // Auto scroll to bottom of chat
   useEffect(() => {
@@ -85,6 +120,8 @@ const App: React.FC = () => {
 
   // Close export menu when clicking outside
   useEffect(() => {
+    if (!showExportMenu) return;
+
     const handleClickOutside = (event: MouseEvent) => {
       const target = event.target as Node;
       const insideTrigger = exportTriggerRef.current?.contains(target);
@@ -93,169 +130,152 @@ const App: React.FC = () => {
         setShowExportMenu(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [showExportMenu]);
 
-  // Debounce Logic: Update renderedCode only when user stops typing for 1s
-  useEffect(() => {
-    if (currentCode === renderedCode) {
-        setIsDebouncing(false);
-        return;
-    }
-
-    setIsDebouncing(true);
-    const handler = setTimeout(() => {
-      setRenderedCode(currentCode);
-      setIsDebouncing(false);
-    }, 1000); // 1 second debounce
-
-    return () => {
-      clearTimeout(handler);
-    };
-  }, [currentCode, renderedCode]);
-
-  const handleGenerate = async () => {
-    if (!prompt.trim()) return;
+  const handleGenerate = useCallback(async () => {
+    const trimmed = prompt.trim();
+    if (!trimmed || isLoading) return;
+    const isUpdate = Boolean(renderedCode.trim() || currentCode.trim());
 
     const userMessage: ChatMessage = {
-      id: Date.now().toString(),
+      id: createId(),
       role: 'user',
-      text: prompt
+      text: trimmed,
     };
-    
-    setMessages(prev => [...prev, userMessage]);
+
+    setMessages((prev) => [...prev, userMessage]);
     setPrompt('');
     setIsLoading(true);
     setError(null);
 
     try {
-      // Pass currentCode to enable iterative updates
-      // Use renderedCode here to ensure we send valid/stable code context if user was typing
-      const mermaidCode = await generateMermaidCode(userMessage.text, renderedCode || currentCode);
-      
-      // Update both immediately to bypass debounce when AI generates
+      const mermaidCode = await generateMermaidCode(trimmed, renderedCode || currentCode);
       setCurrentCode(mermaidCode);
-      setRenderedCode(mermaidCode);
-      
-      const aiMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        role: 'ai',
-        text: renderedCode ? 'Диаграмма обновлена.' : 'Диаграмма создана.'
-      };
-      setMessages(prev => [...prev, aiMessage]);
+      flush(mermaidCode);
 
-    } catch (err) {
-      console.error(err);
-      setError('Не удалось сгенерировать диаграмму.');
-      
-      const errorMessage: ChatMessage = {
-        id: (Date.now() + 1).toString(),
+      const aiMessage: ChatMessage = {
+        id: createId(),
         role: 'ai',
-        text: 'Извините, произошла ошибка при генерации.'
+        text: isUpdate ? 'Диаграмма обновлена.' : 'Диаграмма создана.',
       };
-      setMessages(prev => [...prev, errorMessage]);
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Не удалось сгенерировать диаграмму.';
+      console.error(err);
+      setError(message);
+
+      const errorMessage: ChatMessage = {
+        id: createId(),
+        role: 'ai',
+        text: 'Извините, произошла ошибка при генерации.',
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [prompt, isLoading, renderedCode, currentCode, setCurrentCode, flush]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
       handleGenerate();
     }
   };
 
-  const handleDownloadSvg = useCallback(() => {
-    const svgElement = document.querySelector('#mermaid-svg-root svg');
-    if (!svgElement) return;
+  const exportDiagram = useCallback(
+    (format: 'svg' | 'png') => {
+      const svgElement = document.querySelector<SVGSVGElement>('#mermaid-svg-root svg');
+      if (!svgElement) {
+        setError('Диаграмма не найдена. Сначала сгенерируйте её.');
+        setShowExportMenu(false);
+        return;
+      }
 
-    const svgClone = svgElement.cloneNode(true) as SVGElement;
+      const svgClone = svgElement.cloneNode(true) as SVGSVGElement;
+      if (!svgClone.getAttribute('xmlns')) {
+        svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+      }
+      if (!svgClone.getAttribute('xmlns:xlink')) {
+        svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+      }
 
-    // Ensure namespaces exist for correct export
-    if (!svgClone.getAttribute('xmlns')) {
-      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    }
-    if (!svgClone.getAttribute('xmlns:xlink')) {
-      svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-    }
+      const svgData = new XMLSerializer().serializeToString(svgClone);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
 
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `diagram-${Date.now()}.svg`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setShowExportMenu(false);
-  }, []);
+      if (format === 'svg') {
+        const url = URL.createObjectURL(svgBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `diagram-${Date.now()}.svg`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        setShowExportMenu(false);
+        return;
+      }
 
-  const handleDownloadPng = useCallback(() => {
-    const svgElement = document.querySelector('#mermaid-svg-root svg');
-    if (!svgElement) return;
+      const url = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = () => {
+        const viewBox = svgClone.getAttribute('viewBox');
+        const rect = svgElement.getBoundingClientRect();
+        const [, , vbW, vbH] = viewBox ? viewBox.split(/\s+/).map(Number) : [0, 0, rect.width, rect.height];
+        const width = vbW || rect.width || 800;
+        const height = vbH || rect.height || 600;
 
-    const viewBox = svgElement.getAttribute('viewBox');
-    const rect = svgElement.getBoundingClientRect();
-    const [vbX, vbY, vbW, vbH] = viewBox ? viewBox.split(/\s+/).map(Number) : [0, 0, rect.width, rect.height];
-    const width = vbW || rect.width || 800;
-    const height = vbH || rect.height || 600;
+        const scale = 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = width * scale;
+        canvas.height = height * scale;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          setError('Браузер не поддерживает экспорт в PNG.');
+          URL.revokeObjectURL(url);
+          setShowExportMenu(false);
+          return;
+        }
 
-    const svgClone = svgElement.cloneNode(true) as SVGElement;
-    svgClone.setAttribute('width', width.toString());
-    svgClone.setAttribute('height', height.toString());
-    if (!svgClone.getAttribute('xmlns')) {
-      svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    }
-    if (!svgClone.getAttribute('xmlns:xlink')) {
-      svgClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-    }
-    
-    const svgData = new XMLSerializer().serializeToString(svgClone);
-    
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    const scale = 2; 
-    canvas.width = width * scale;
-    canvas.height = height * scale;
-
-    const svgBase64 = window.btoa(unescape(encodeURIComponent(svgData)));
-    const url = `data:image/svg+xml;base64,${svgBase64}`;
-
-    img.onload = () => {
-      if (ctx) {
         ctx.fillStyle = 'white';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        try {
-          const pngUrl = canvas.toDataURL('image/png');
+
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            setError('Ошибка при экспорте в PNG. Попробуйте SVG.');
+            URL.revokeObjectURL(url);
+            setShowExportMenu(false);
+            return;
+          }
+
+          const pngUrl = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = pngUrl;
           link.download = `diagram-${Date.now()}.png`;
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-        } catch (err) {
-          console.error(err);
-          setError('Ошибка при экспорте в PNG. Попробуйте SVG.');
-        }
-      }
-      setShowExportMenu(false);
-    };
+          URL.revokeObjectURL(pngUrl);
+          URL.revokeObjectURL(url);
+          setShowExportMenu(false);
+        }, 'image/png');
+      };
 
-    img.onerror = () => {
-      setError('Ошибка при экспорте в PNG. Попробуйте SVG.');
-      setShowExportMenu(false);
-    };
+      img.onerror = () => {
+        setError('Ошибка при экспорте в PNG. Попробуйте SVG.');
+        URL.revokeObjectURL(url);
+        setShowExportMenu(false);
+      };
 
-    img.src = url;
-  }, []);
+      img.src = url;
+    },
+    [setError]
+  );
 
   const toggleExportMenu = useCallback(() => {
-    if (!renderedCode) return;
+    if (!hasDiagram) return;
     if (!showExportMenu) {
       const rect = exportButtonRef.current?.getBoundingClientRect();
       const menuWidth = 192;
@@ -267,7 +287,47 @@ const App: React.FC = () => {
       });
     }
     setShowExportMenu((prev) => !prev);
-  }, [renderedCode, showExportMenu]);
+  }, [hasDiagram, showExportMenu]);
+
+  const handleCopyCode = useCallback(async () => {
+    const codeToCopy = renderedCode || currentCode;
+    if (!codeToCopy.trim()) return;
+
+    try {
+      await navigator.clipboard.writeText(codeToCopy);
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 1500);
+    } catch (err) {
+      console.error(err);
+      setError('Не удалось скопировать код.');
+    }
+  }, [renderedCode, currentCode]);
+
+  const handleReset = useCallback(() => {
+    setCurrentCode('');
+    flush('');
+    setMessages([]);
+    setPrompt('');
+    setError(null);
+    setShowExportMenu(false);
+    setCopyState('idle');
+  }, [flush, setCurrentCode, setMessages]);
+
+  const handleCodeChange = useCallback(
+    (value: string) => {
+      setCurrentCode(value);
+      setError(null);
+    },
+    [setCurrentCode]
+  );
+
+  const handleQuickPrompt = useCallback((text: string) => {
+    setPrompt(text);
+    setActiveSidebarTab('chat');
+    requestAnimationFrame(() => {
+      promptInputRef.current?.focus();
+    });
+  }, []);
 
   return (
     <div className="flex h-screen w-full bg-slate-100 text-slate-900 overflow-visible relative">
@@ -306,7 +366,10 @@ const App: React.FC = () => {
                   : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
               }`}
             >
-              Чат
+              <span className="inline-flex items-center justify-center gap-2">
+                <SparklesIcon />
+                <span>Чат</span>
+              </span>
             </button>
             <button
               onClick={() => setActiveSidebarTab('code')}
@@ -316,7 +379,10 @@ const App: React.FC = () => {
                   : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
               }`}
             >
-              Код
+              <span className="inline-flex items-center justify-center gap-2">
+                <CodeIcon />
+                <span>Код</span>
+              </span>
             </button>
           </div>
         </div>
@@ -332,7 +398,7 @@ const App: React.FC = () => {
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                       <SparklesIcon />
                     </div>
-                    <p>Опишите желаемую диаграмму, чтобы начать.</p>
+                    <p>Выберите быструю подсказку выше или опишите задачу.</p>
                     <p className="mt-2 text-xs">Например: "Схема регистрации пользователя"</p>
                   </div>
                 )}
@@ -371,12 +437,25 @@ const App: React.FC = () => {
               </div>
 
               {/* Input Area */}
-              <div className="p-4 bg-white shrink-0 border-t border-slate-200">
+              <div className="p-4 bg-white shrink-0 border-t border-slate-200 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_PROMPTS.map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => handleQuickPrompt(item.text)}
+                      className="px-3 py-1.5 text-xs border border-slate-200 rounded-full bg-slate-50 hover:border-blue-200 hover:text-blue-600 transition-colors shadow-sm"
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+
                 <div className="relative">
                   <textarea
+                    ref={promptInputRef}
                     id="prompt"
-                    className="w-full p-3 pr-12 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[80px]"
-                    placeholder={currentCode ? "Добавьте кэширование..." : "Опишите диаграмму..."}
+                    className="w-full p-3 pr-12 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[90px]"
+                    placeholder={currentCode ? 'Попросите улучшить диаграмму или добавить детали...' : 'Опишите диаграмму...'}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -396,11 +475,19 @@ const App: React.FC = () => {
                     <SendIcon />
                   </button>
                 </div>
-                <div className="text-xs text-slate-400 mt-2 text-center">
-                  Используйте <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> для отправки
+                <div className="flex items-center justify-between text-xs text-slate-400">
+                  <span>
+                    <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> для отправки
+                  </span>
+                  {isLoading && (
+                    <span className="flex items-center gap-1 text-blue-500">
+                      <RefreshIcon />
+                      <span>Ждём ответ...</span>
+                    </span>
+                  )}
                 </div>
                 {error && (
-                  <div className="mt-2 p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
+                  <div className="p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
                     {error}
                   </div>
                 )}
@@ -412,7 +499,7 @@ const App: React.FC = () => {
             <div className="flex-1 flex flex-col min-h-0 min-w-0">
               <div className="h-full border-t border-slate-200 flex flex-col min-h-0 min-w-0">
                  <div className="flex-1 min-h-0 min-w-0 overflow-auto overflow-x-auto">
-                   <Editor value={currentCode} onChange={setCurrentCode} />
+                   <Editor value={currentCode} onChange={handleCodeChange} />
                  </div>
               </div>
             </div>
@@ -423,7 +510,7 @@ const App: React.FC = () => {
       {/* Main Canvas Area */}
       <div className="flex-1 bg-slate-50 relative flex flex-col h-full overflow-visible">
         {/* Toolbar */}
-        <div className="h-16 border-b border-slate-200 bg-white/50 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10 overflow-visible">
+        <div className="h-16 border-b border-slate-200 bg-white/60 backdrop-blur-sm flex items-center justify-between px-6 sticky top-0 z-10 overflow-visible">
           <div className="flex items-center space-x-4">
             {!isSidebarOpen && (
               <button
@@ -441,52 +528,79 @@ const App: React.FC = () => {
                      <span>Синхронизация...</span>
                  </div>
             )}
+            {!isDebouncing && hasDiagram && (
+              <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
+                Автообновление
+              </div>
+            )}
           </div>
           
-          <div className="flex items-center space-x-3 relative" ref={exportTriggerRef}>
-             <div className="flex items-center space-x-2 relative">
-             <button 
+          <div className="flex items-center space-x-2 relative" ref={exportTriggerRef}>
+            <button
+              onClick={handleCopyCode}
+              disabled={!hasDiagram}
+              className="px-3 py-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+              title="Скопировать Mermaid код"
+            >
+              <CopyIcon />
+              <span className="text-sm font-medium">
+                {copyState === 'copied' ? 'Скопировано' : 'Скопировать'}
+              </span>
+            </button>
+
+            <div className="flex items-center space-x-2 relative">
+              <button 
                 ref={exportButtonRef}
                 onClick={toggleExportMenu}
-                disabled={!renderedCode}
+                disabled={!hasDiagram}
                 className="px-3 py-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
                 title="Экспорт диаграммы"
-             >
-               <DownloadIcon />
-               <span className="text-sm font-medium">Экспорт</span>
-             </button>
+              >
+                <DownloadIcon />
+                <span className="text-sm font-medium">Экспорт</span>
+              </button>
 
-             {showExportMenu &&
-               createPortal(
-                 <div
-                   ref={exportMenuPortalRef}
-                   className="fixed bg-white rounded-lg shadow-xl border border-slate-100 z-[9999] py-1"
-                   style={{
-                     top: `${exportMenuPos.top}px`,
-                     left: `${exportMenuPos.left}px`,
-                     width: `${exportMenuPos.width}px`,
-                   }}
-                   onClick={(e) => e.stopPropagation()}
-                 >
-                     <button 
-                         onClick={handleDownloadSvg} 
-                         className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
-                     >
-                         <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">SVG</div>
-                         <span>Векторный</span>
-                     </button>
-                     <button 
-                         onClick={handleDownloadPng} 
-                         className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
-                     >
-                         <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">PNG</div>
-                         <span>Изображение</span>
-                     </button>
-                 </div>,
-                 document.body
-               )
-             }
-             </div>
+              {showExportMenu &&
+                createPortal(
+                  <div
+                    ref={exportMenuPortalRef}
+                    className="fixed bg-white rounded-lg shadow-xl border border-slate-100 z-[9999] py-1"
+                    style={{
+                      top: `${exportMenuPos.top}px`,
+                      left: `${exportMenuPos.left}px`,
+                      width: `${exportMenuPos.width}px`,
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button 
+                        onClick={() => exportDiagram('svg')} 
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
+                    >
+                        <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">SVG</div>
+                        <span>Векторный</span>
+                    </button>
+                    <button 
+                        onClick={() => exportDiagram('png')} 
+                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
+                    >
+                        <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">PNG</div>
+                        <span>Изображение</span>
+                    </button>
+                  </div>,
+                  document.body
+                )
+              }
+            </div>
+
+            <button
+              onClick={handleReset}
+              disabled={!canReset}
+              className="px-3 py-2 text-slate-600 hover:text-red-600 bg-white border border-slate-200 rounded-lg hover:border-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
+              title="Сбросить диаграмму и историю"
+            >
+              <TrashIcon />
+              <span className="text-sm font-medium">Сброс</span>
+            </button>
           </div>
         </div>
 
