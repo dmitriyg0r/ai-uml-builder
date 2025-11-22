@@ -1,0 +1,5 @@
+{
+  "name": "AI UML Builder",
+  "description": "Генератор UML диаграмм на основе искусственного интеллекта Gemini. Превращает текстовые описания в визуальные схемы.",
+  "requestFramePermissions": []
+}
