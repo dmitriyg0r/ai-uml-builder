@@ -123,6 +123,7 @@ const App: React.FC = () => {
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isChatsDropdownOpen, setIsChatsDropdownOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   const { user, signOut } = useAuth();
 
@@ -144,6 +145,8 @@ const App: React.FC = () => {
   const exportButtonRef = useRef<HTMLButtonElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const promptInputRef = useRef<HTMLTextAreaElement>(null);
+  const profileButtonRef = useRef<HTMLButtonElement>(null);
+  const profileMenuRef = useRef<HTMLDivElement>(null);
   const [exportMenuPos, setExportMenuPos] = useState<{ top: number; left: number; width: number }>({
     top: 0,
     left: 0,
@@ -192,6 +195,22 @@ const App: React.FC = () => {
     document.addEventListener('pointerdown', handleClickOutside);
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [isChatsDropdownOpen]);
+
+  // Close profile menu when clicking outside
+  useEffect(() => {
+    if (!isProfileMenuOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const insideButton = profileButtonRef.current?.contains(target);
+      const insideMenu = profileMenuRef.current?.contains(target);
+      if (!insideButton && !insideMenu) {
+        setIsProfileMenuOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [isProfileMenuOpen]);
 
   const handleGenerate = useCallback(async () => {
     // Проверяем авторизацию
@@ -744,31 +763,73 @@ const App: React.FC = () => {
               <span className="text-sm font-medium">Сброс</span>
             </button>
 
-            {/* Auth Button */}
-            {user ? (
-              <div className="flex items-center gap-2">
-                <div className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 flex items-center gap-2">
-                  <UserIcon />
-                  <span className="font-medium">{user.email?.split('@')[0]}</span>
-                </div>
+            {/* Profile Button */}
+            <div className="relative">
+              {user ? (
                 <button
-                  onClick={() => signOut()}
-                  className="px-3 py-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors flex items-center gap-2 shadow-sm"
-                  title="Выйти из аккаунта"
+                  ref={profileButtonRef}
+                  onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
+                  className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center gap-2 shadow-sm"
+                  title="Профиль"
                 >
-                  <span className="text-sm font-medium">Выйти</span>
+                  <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
+                    <UserIcon />
+                  </div>
+                  <span className="font-medium">{user.email?.split('@')[0]}</span>
                 </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsAuthModalOpen(true)}
-                className="px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-                title="Войти в аккаунт"
-              >
-                <UserIcon />
-                <span className="text-sm font-medium">Войти</span>
-              </button>
-            )}
+              ) : (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                  title="Войти в аккаунт"
+                >
+                  <UserIcon />
+                  <span className="text-sm font-medium">Войти</span>
+                </button>
+              )}
+
+              {/* Profile Menu */}
+              {user && isProfileMenuOpen && createPortal(
+                <div
+                  ref={profileMenuRef}
+                  className="fixed bg-white rounded-lg shadow-xl border border-slate-200 z-[9999] min-w-[240px]"
+                  style={{
+                    top: `${profileButtonRef.current?.getBoundingClientRect().bottom! + 8}px`,
+                    right: `${window.innerWidth - profileButtonRef.current?.getBoundingClientRect().right!}px`,
+                  }}
+                >
+                  {/* User Info */}
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-full flex items-center justify-center font-semibold text-lg">
+                        {user.email?.charAt(0).toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-800 truncate">{user.email?.split('@')[0]}</div>
+                        <div className="text-xs text-slate-500 truncate">{user.email}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Menu Items */}
+                  <div className="py-1">
+                    <button
+                      onClick={() => {
+                        signOut();
+                        setIsProfileMenuOpen(false);
+                      }}
+                      className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 hover:text-red-600 flex items-center gap-3 transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
+                      </svg>
+                      <span>Выйти из аккаунта</span>
+                    </button>
+                  </div>
+                </div>,
+                document.body
+              )}
+            </div>
           </div>
         </div>
 
