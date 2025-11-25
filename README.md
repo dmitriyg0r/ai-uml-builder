@@ -45,14 +45,25 @@ AI UML Builder is a modern React application that converts natural language desc
    npm install
    ```
 
-3. **Set up environment variables**
+3. **Get your Polza API Key**
+   
+   Register on Polza.ai to get your API key:
+   
+   👉 **[Register on Polza.ai](https://polza.ai?referral=mJw7p6k3Jg)** (with bonus credits)
+   
+   Steps:
+   - Create an account
+   - Top up your balance
+   - Get your API key from the dashboard
+
+4. **Set up environment variables**
    
    Create a `.env` file in the root directory:
    ```env
    VITE_POLZA_API_KEY=your_api_key_here
    ```
 
-4. **Start the development server**
+5. **Start the development server**
    ```bash
    npm run dev
    ```
