@@ -36,11 +36,11 @@ AI UML Builder is a modern React application that converts natural language desc
 
 👉 **[Download from Releases](https://github.com/dmitriyg0r/ai-uml-builder/releases/latest)**
 
-- **Windows**: `AI UML Builder 0.0.0.exe` (x64)
+- **Windows**: `AI UML Builder.exe` (x64)
 - **macOS**: 
   - Apple Silicon (M1/M2/M3): `mac-arm64`
   - Intel: `mac`
-- **Linux**: `linux-unpacked` (x64)
+- **Linux**: `linux` (x64)
 
 > 💡 The desktop app comes with the API key pre-configured, so you can start using it immediately!
 
