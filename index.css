@@ -71,3 +71,75 @@ textarea:focus-visible {
 .scrollbar-track-slate-800\/50::-webkit-scrollbar-track {
   background: rgba(30, 41, 59, 0.5);
 }
+
+/* Prism.js Syntax Highlighting (Dracula-inspired theme) */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6272a4;
+  font-style: italic;
+}
+
+.token.punctuation {
+  color: #f8f8f2;
+}
+
+.token.property,
+.token.tag,
+.token.boolean,
+.token.number,
+.token.constant,
+.token.symbol,
+.token.deleted {
+  color: #bd93f9;
+}
+
+.token.selector,
+.token.attr-name,
+.token.string,
+.token.char,
+.token.builtin,
+.token.inserted {
+  color: #50fa7b;
+}
+
+.token.operator,
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string {
+  color: #ff79c6;
+  background: transparent;
+}
+
+.token.atrule,
+.token.attr-value,
+.token.keyword {
+  color: #8be9fd;
+  font-weight: 600;
+}
+
+.token.function,
+.token.class-name {
+  color: #ffb86c;
+}
+
+.token.regex,
+.token.important,
+.token.variable {
+  color: #ff79c6;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.entity {
+  cursor: help;
+}
