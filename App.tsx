@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
-import { generateMermaidCode } from './services/geminiService';
+import { generateMermaidCode, generateChatTitle } from './services/geminiService';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
@@ -113,6 +113,7 @@ const App: React.FC = () => {
     createChat,
     switchChat,
     deleteChat,
+    renameChat,
     updateChatMessages,
     updateChatCode,
     clearCurrentChat,
@@ -229,6 +230,17 @@ const App: React.FC = () => {
         text: isUpdate ? 'Диаграмма обновлена.' : 'Диаграмма создана.',
       };
       updateChatMessages(activeChat.id, [...newMessages, aiMessage]);
+
+      // Генерируем название чата только для первого сообщения
+      if (messages.length === 0 && activeChat.name.match(/^Чат \d+$/)) {
+        generateChatTitle(trimmed, controller.signal)
+          .then((title) => {
+            renameChat(activeChat.id, title);
+          })
+          .catch((err) => {
+            console.error('Failed to generate chat title:', err);
+          });
+      }
     } catch (err: any) {
       if (err.name === 'AbortError') {
         console.log('Generation aborted');

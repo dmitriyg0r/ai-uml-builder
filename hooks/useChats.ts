@@ -7,11 +7,11 @@ const createId = () =>
     ? crypto.randomUUID()
     : Date.now().toString(36);
 
-const createNewChat = (index: number): Chat => {
+const createNewChat = (index: number, customName?: string): Chat => {
   const now = Date.now();
   return {
     id: createId(),
-    name: `Чат ${index}`,
+    name: customName || `Чат ${index}`,
     messages: [],
     code: '',
     createdAt: now,
@@ -75,9 +75,9 @@ export const useChats = () => {
 
   const activeChat = state.chats.find((chat) => chat.id === state.activeChatId) || state.chats[0];
 
-  const createChat = useCallback(() => {
+  const createChat = useCallback((customName?: string) => {
     const newIndex = state.chats.length + 1;
-    const newChat = createNewChat(newIndex);
+    const newChat = createNewChat(newIndex, customName);
     setState((prev) => ({
       chats: [...prev.chats, newChat],
       activeChatId: newChat.id,

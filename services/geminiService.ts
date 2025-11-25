@@ -120,3 +120,66 @@ INSTRUCTION: Update the existing code above based on the user request. Return th
     throw error;
   }
 };
+
+const TITLE_GENERATION_INSTRUCTION = `
+You are a helpful assistant that generates short, descriptive chat titles.
+Your task is to create a concise title (2-5 words) based on the user's first message.
+
+Rules:
+1. Return ONLY the title text, no quotes, no explanations.
+2. Keep it under 40 characters.
+3. Use the same language as the user's message.
+4. Make it descriptive and specific to the topic.
+5. For UML/diagram requests, focus on the subject (e.g., "Регистрация пользователя", "Платёжная система").
+`;
+
+export const generateChatTitle = async (firstMessage: string, signal?: AbortSignal): Promise<string> => {
+  try {
+    const apiKey =
+      import.meta.env.VITE_POLZA_API_KEY ||
+      import.meta.env.VITE_API_KEY ||
+      import.meta.env.POLZA_API_KEY ||
+      import.meta.env.API_KEY ||
+      process.env.POLZA_API_KEY ||
+      process.env.API_KEY;
+
+    if (!apiKey) {
+      throw new Error('POLZA_API_KEY is not set.');
+    }
+
+    const response = await fetch('https://api.polza.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-chat',
+        temperature: 0.3,
+        messages: [
+          { role: 'system', content: TITLE_GENERATION_INSTRUCTION },
+          { role: 'user', content: firstMessage },
+        ],
+      }),
+      signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Title generation failed: ${response.status}`);
+    }
+
+    const completion = await response.json();
+    const title = completion?.choices?.[0]?.message?.content?.trim() || '';
+    
+    if (!title) {
+      throw new Error('No title generated');
+    }
+
+    // Убираем кавычки если они есть и обрезаем до 50 символов
+    return title.replace(/^["']|["']$/g, '').slice(0, 50);
+  } catch (error) {
+    console.error('Error generating chat title:', error);
+    // В случае ошибки возвращаем краткую версию первого сообщения
+    return firstMessage.slice(0, 30) + (firstMessage.length > 30 ? '...' : '');
+  }
+};
