@@ -7,7 +7,7 @@ import renderer from 'vite-plugin-electron-renderer';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, '.', '');
     // Use hardcoded API key for build
-    const apiKey = env.VITE_POLZA_API_KEY || 'ak_--s3QLygvPaYbKy0PofnInt1ogKYkRg0rouxdOe1LOE';
+    const apiKey = env.VITE_POLZA_API_KEY;
     
     return {
       server: {
