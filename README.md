@@ -10,6 +10,7 @@ AI UML Builder is a modern React application that converts natural language desc
 ![License](https://img.shields.io/badge/License-MIT-green)
 
 
+
 ## ✨ Features
 
 - 🤖 **AI-Powered Generation** - Leverages DeepSeek AI through Polza API to understand your descriptions
