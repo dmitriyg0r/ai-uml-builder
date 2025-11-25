@@ -1,5 +1,9 @@
 # 🎨 AI UML Builder
 
+<div align="center">
+  <img src="logoname.png" alt="Dream AI Logo" width="600"/>
+</div>
+
 > Transform your ideas into professional UML diagrams using the power of AI
 
 AI UML Builder is a modern React application that converts natural language descriptions into beautiful UML diagrams. Simply describe your system architecture, class structure, or workflow in plain text, and watch as AI generates precise Mermaid diagrams for you.

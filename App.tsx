@@ -364,11 +364,14 @@ const App: React.FC = () => {
         {/* Header */}
         <div className="p-4 border-b border-slate-100 shrink-0 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-3">
-            <div>
-              <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-               Dream AI
-              </h1>
-              <p className="text-slate-500 text-xs mt-1">Создание и редактирование UML с помощью AI</p>
+            <div className="flex items-center gap-3">
+              <img src="/logo.png" alt="Dream AI Logo" className="w-12 h-12 object-contain" />
+              <div>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                 Dream AI
+                </h1>
+                <p className="text-slate-500 text-xs mt-1">UML Generator & Code</p>
+              </div>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
