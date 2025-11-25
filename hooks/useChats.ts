@@ -7,11 +7,11 @@ const createId = () =>
     ? crypto.randomUUID()
     : Date.now().toString(36);
 
-const createNewChat = (index: number, customName?: string): Chat => {
+const createNewChat = (customName?: string): Chat => {
   const now = Date.now();
   return {
     id: createId(),
-    name: customName || `Чат ${index}`,
+    name: customName || 'Новый чат',
     messages: [],
     code: '',
     createdAt: now,
@@ -32,7 +32,7 @@ const migrateOldData = (): ChatState | null => {
       const now = Date.now();
       const migratedChat: Chat = {
         id: createId(),
-        name: 'Чат 1',
+        name: 'Новый чат',
         messages,
         code,
         createdAt: now,
@@ -63,7 +63,7 @@ const getInitialState = (): ChatState => {
   }
   
   // Создаём первый чат по умолчанию
-  const firstChat = createNewChat(1);
+  const firstChat = createNewChat();
   return {
     chats: [firstChat],
     activeChatId: firstChat.id,
@@ -76,14 +76,13 @@ export const useChats = () => {
   const activeChat = state.chats.find((chat) => chat.id === state.activeChatId) || state.chats[0];
 
   const createChat = useCallback((customName?: string) => {
-    const newIndex = state.chats.length + 1;
-    const newChat = createNewChat(newIndex, customName);
+    const newChat = createNewChat(customName);
     setState((prev) => ({
       chats: [...prev.chats, newChat],
       activeChatId: newChat.id,
     }));
     return newChat.id;
-  }, [state.chats.length, setState]);
+  }, [setState]);
 
   const switchChat = useCallback(
     (chatId: string) => {
@@ -102,7 +101,7 @@ export const useChats = () => {
         
         // Если удаляем последний чат, создаём новый
         if (newChats.length === 0) {
-          const newChat = createNewChat(1);
+          const newChat = createNewChat();
           return {
             chats: [newChat],
             activeChatId: newChat.id,
