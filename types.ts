@@ -20,3 +20,23 @@ export enum DiagramType {
   GANTT = 'gantt',
   MINDMAP = 'mindmap'
 }
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'ai';
+  text: string;
+}
+
+export interface Chat {
+  id: string;
+  name: string;
+  messages: ChatMessage[];
+  code: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface ChatState {
+  chats: Chat[];
+  activeChatId: string | null;
+}

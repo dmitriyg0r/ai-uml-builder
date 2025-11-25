@@ -3,9 +3,10 @@ import { createPortal } from 'react-dom';
 import { generateMermaidCode } from './services/geminiService';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ConfirmationModal } from './components/ConfirmationModal';
-import { useLocalStorageState } from './hooks/useLocalStorageState';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
 import { useDiagramExport } from './hooks/useDiagramExport';
+import { useChats } from './hooks/useChats';
+import { ChatMessage } from './types';
 
 const MermaidRenderer = React.lazy(() => import('./components/MermaidRenderer'));
 const Editor = React.lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
@@ -72,11 +73,24 @@ const CodeIcon = () => (
   </svg>
 );
 
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'ai';
-  text: string;
-}
+const PlusIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+  </svg>
+);
+
+const ChatIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8.625 12a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H8.25m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0H12m4.125 0a.375.375 0 1 1-.75 0 .375.375 0 0 1 .75 0Zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 0 1-2.555-.337A5.972 5.972 0 0 1 5.41 20.97a5.969 5.969 0 0 1-.474-.065 4.48 4.48 0 0 0 .978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25Z" />
+  </svg>
+);
+
+const ChevronDownIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+  </svg>
+);
+
 
 type SidebarTab = 'chat' | 'code';
 
@@ -93,23 +107,36 @@ const createId = () =>
     : Date.now().toString(36);
 
 const App: React.FC = () => {
+  const {
+    chats,
+    activeChat,
+    createChat,
+    switchChat,
+    deleteChat,
+    updateChatMessages,
+    updateChatCode,
+    clearCurrentChat,
+  } = useChats();
+
   const [prompt, setPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [activeSidebarTab, setActiveSidebarTab] = useState<SidebarTab>('chat');
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [chatToDelete, setChatToDelete] = useState<string | null>(null);
+  const [isChatsDropdownOpen, setIsChatsDropdownOpen] = useState(false);
 
   // Memoize setError to prevent MermaidRenderer re-renders
   const handleError = useCallback((err: string | null) => {
     setError(err);
   }, []);
 
-  const [currentCode, setCurrentCode] = useLocalStorageState<string>('uml:code', '');
+  const currentCode = activeChat?.code || '';
+  const messages = activeChat?.messages || [];
   const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 800);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [messages, setMessages] = useLocalStorageState<ChatMessage[]>('uml:messages', []);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
 
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -153,9 +180,23 @@ const App: React.FC = () => {
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [showExportMenu]);
 
+  // Close chats dropdown when clicking outside
+  useEffect(() => {
+    if (!isChatsDropdownOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (!target.closest('.chats-dropdown')) {
+        setIsChatsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('pointerdown', handleClickOutside);
+    return () => document.removeEventListener('pointerdown', handleClickOutside);
+  }, [isChatsDropdownOpen]);
+
   const handleGenerate = useCallback(async () => {
     const trimmed = prompt.trim();
-    if (!trimmed || isLoading) return;
+    if (!trimmed || isLoading || !activeChat) return;
     const isUpdate = Boolean(renderedCode.trim() || currentCode.trim());
 
     const userMessage: ChatMessage = {
@@ -164,7 +205,8 @@ const App: React.FC = () => {
       text: trimmed,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
+    const newMessages = [...messages, userMessage];
+    updateChatMessages(activeChat.id, newMessages);
     setPrompt('');
     setIsLoading(true);
     setError(null);
@@ -178,7 +220,7 @@ const App: React.FC = () => {
 
     try {
       const mermaidCode = await generateMermaidCode(trimmed, renderedCode || currentCode, controller.signal);
-      setCurrentCode(mermaidCode);
+      updateChatCode(activeChat.id, mermaidCode);
       flush(mermaidCode);
 
       const aiMessage: ChatMessage = {
@@ -186,7 +228,7 @@ const App: React.FC = () => {
         role: 'ai',
         text: isUpdate ? 'Диаграмма обновлена.' : 'Диаграмма создана.',
       };
-      setMessages((prev) => [...prev, aiMessage]);
+      updateChatMessages(activeChat.id, [...newMessages, aiMessage]);
     } catch (err: any) {
       if (err.name === 'AbortError') {
         console.log('Generation aborted');
@@ -201,12 +243,12 @@ const App: React.FC = () => {
         role: 'ai',
         text: 'Извините, произошла ошибка при генерации.',
       };
-      setMessages((prev) => [...prev, errorMessage]);
+      updateChatMessages(activeChat.id, [...newMessages, errorMessage]);
     } finally {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [prompt, isLoading, renderedCode, currentCode, setCurrentCode, flush]);
+  }, [prompt, isLoading, renderedCode, currentCode, messages, activeChat, updateChatMessages, updateChatCode, flush]);
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -253,15 +295,14 @@ const App: React.FC = () => {
   }, [renderedCode, currentCode]);
 
   const confirmReset = useCallback(() => {
-    setCurrentCode('');
+    clearCurrentChat();
     flush('');
-    setMessages([]);
     setPrompt('');
     setError(null);
     setShowExportMenu(false);
     setCopyState('idle');
     setIsResetModalOpen(false);
-  }, [flush, setCurrentCode, setMessages]);
+  }, [clearCurrentChat, flush]);
 
   const handleResetClick = () => {
     if (canReset) {
@@ -271,10 +312,12 @@ const App: React.FC = () => {
 
   const handleCodeChange = useCallback(
     (value: string) => {
-      setCurrentCode(value);
-      setError(null);
+      if (activeChat) {
+        updateChatCode(activeChat.id, value);
+        setError(null);
+      }
     },
-    [setCurrentCode]
+    [activeChat, updateChatCode]
   );
 
   const handleQuickPrompt = useCallback((text: string) => {
@@ -285,6 +328,13 @@ const App: React.FC = () => {
     });
   }, []);
 
+  const confirmDeleteChat = useCallback(() => {
+    if (chatToDelete) {
+      deleteChat(chatToDelete);
+      setChatToDelete(null);
+    }
+  }, [chatToDelete, deleteChat]);
+
   return (
     <div className="flex h-screen w-full bg-slate-100 text-slate-900 relative overflow-hidden">
       <ConfirmationModal
@@ -294,6 +344,16 @@ const App: React.FC = () => {
         onConfirm={confirmReset}
         onCancel={() => setIsResetModalOpen(false)}
         confirmLabel="Сбросить"
+        isDestructive
+      />
+
+      <ConfirmationModal
+        isOpen={chatToDelete !== null}
+        title="Удалить чат?"
+        message="Это действие удалит чат и всю его историю. Отменить это действие нельзя."
+        onConfirm={confirmDeleteChat}
+        onCancel={() => setChatToDelete(null)}
+        confirmLabel="Удалить"
         isDestructive
       />
 
@@ -320,6 +380,78 @@ const App: React.FC = () => {
             >
               <CollapseIcon />
             </button>
+          </div>
+
+          {/* Chats Selector */}
+          <div className="relative chats-dropdown">
+            <button
+              onClick={() => setIsChatsDropdownOpen(!isChatsDropdownOpen)}
+              className="w-full flex items-center justify-between px-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg hover:border-blue-300 transition-colors"
+            >
+              <div className="flex items-center gap-2 text-slate-700 truncate">
+                <ChatIcon />
+                <span className="truncate">{activeChat?.name || 'Выберите чат'}</span>
+              </div>
+              <ChevronDownIcon />
+            </button>
+
+            {isChatsDropdownOpen && (
+              <div className="chats-dropdown absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-30">
+                <div className="p-2">
+                  <button
+                    onClick={() => {
+                      createChat();
+                      setIsChatsDropdownOpen(false);
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                  >
+                    <PlusIcon />
+                    <span>Новый чат</span>
+                  </button>
+                </div>
+                <div className="border-t border-slate-100">
+                  {chats.map((chat) => (
+                    <div
+                      key={chat.id}
+                      className={`flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ${
+                        chat.id === activeChat?.id ? 'bg-blue-50' : ''
+                      }`}
+                    >
+                      <button
+                        onClick={() => {
+                          switchChat(chat.id);
+                          setIsChatsDropdownOpen(false);
+                        }}
+                        className="flex-1 text-left truncate"
+                      >
+                        <div className="font-medium text-slate-700 truncate">{chat.name}</div>
+                        <div className="text-xs text-slate-400">
+                          {new Date(chat.updatedAt).toLocaleDateString('ru-RU', {
+                            day: 'numeric',
+                            month: 'short',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </div>
+                      </button>
+                      {chats.length > 1 && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setChatToDelete(chat.id);
+                            setIsChatsDropdownOpen(false);
+                          }}
+                          className="ml-2 p-1 text-slate-400 hover:text-red-600 transition-colors"
+                          title="Удалить чат"
+                        >
+                          <TrashIcon />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Tabs */}
