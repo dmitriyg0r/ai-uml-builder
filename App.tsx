@@ -225,7 +225,7 @@ const App: React.FC = () => {
       updateChatMessages(activeChat.id, [...newMessages, aiMessage]);
 
       // Генерируем название чата только для первого сообщения
-      if (messages.length === 0 && activeChat.name.match(/^Чат \d+$/)) {
+      if (messages.length === 0 && activeChat.name === 'Новый чат') {
         generateChatTitle(trimmed, controller.signal)
           .then((title) => {
             renameChat(activeChat.id, title);
