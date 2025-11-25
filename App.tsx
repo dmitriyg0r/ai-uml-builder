@@ -366,9 +366,9 @@ const App: React.FC = () => {
           <div className="flex items-center justify-between gap-3">
             <div>
               <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                AI UML Builder
+               Dream AI
               </h1>
-              <p className="text-slate-500 text-xs mt-1">Gemini 2.5 • Iterative Mode</p>
+              <p className="text-slate-500 text-xs mt-1">Создание и редактирование UML с помощью AI</p>
             </div>
             <button
               onClick={() => setIsSidebarOpen(false)}
