@@ -25,7 +25,6 @@ AI UML Builder is a modern React application that converts natural language desc
 ### Prerequisites
 
 - Node.js (LTS version recommended)
-- Polza AI API Key
 
 ### Installation
 
@@ -129,7 +128,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 ## 🙌 Acknowledgments
 
 - Built with [Mermaid.js](https://mermaid.js.org/)
-- Powered by [DeepSeek AI](https://www.deepseek.com/)
 - API provided by [Polza AI](https://polza.ai/)
 
 ---
