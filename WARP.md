@@ -48,17 +48,17 @@ A React application that generates UML diagrams from natural language descriptio
 ### Key Components
 
 - **`App.tsx`**: The main application controller. Manages global state (prompt, code, messages), handles AI generation requests, and orchestrates the UI layout (Sidebar, Toolbar, Canvas).
-- **`services/geminiService.ts`**: Handles interactions with the AI API.
+- **`services/aisetService.ts`**: Handles interactions with the AI API.
   - Contains the `SYSTEM_INSTRUCTION` which defines the persona (Software Architect) and strict rules for Mermaid syntax generation.
   - Enforces GOST R 52573-2006 standards for Russian language prompts.
-  - **Note**: Despite the name `geminiService`, it uses the Polza API (`api.polza.ai`) with the `deepseek/deepseek-chat` model.
+  - Uses the Polza API (`api.polza.ai`) with the `deepseek/deepseek-chat` model.
 - **`components/MermaidRenderer.tsx`**: Responsible for rendering the Mermaid code string into a visual diagram.
 - **`components/Editor.tsx`**: Provides a code editor interface for viewing and manually editing the generated Mermaid code.
 - **`hooks/useLocalStorageState.ts`**: Custom hook for persisting state (like chat history and current diagram code) to `localStorage`.
 
 ### Data Flow
 1.  User enters a prompt in the Sidebar.
-2.  `App.tsx` calls `generateMermaidCode` from `geminiService.ts`.
+2.  `App.tsx` calls `generateMermaidCode` from `aisetService.ts`.
 3.  The service constructs a prompt (including existing code if updating) and calls the AI API.
 4.  The returned Mermaid code is cleaned and returned to `App.tsx`.
 5.  `App.tsx` updates the state, which triggers `MermaidRenderer` to draw the diagram.

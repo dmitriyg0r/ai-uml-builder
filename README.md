@@ -79,7 +79,7 @@ ai-uml-builder/
 │   │   ├── Sidebar.tsx
 │   │   └── ...
 │   ├── services/          # API integrations
-│   │   └── geminiService.ts
+│   │   └── aisetService.ts
 │   ├── hooks/            # Custom React hooks
 │   │   └── useLocalStorageState.ts
 │   └── App.tsx           # Main application

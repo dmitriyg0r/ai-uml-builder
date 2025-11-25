@@ -1,6 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
-import { generateMermaidCode, generateChatTitle } from './services/geminiService';
+import { generateMermaidCode, generateChatTitle } from './services/aisetService';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
