@@ -94,13 +94,6 @@ const ChevronDownIcon = () => (
 
 type SidebarTab = 'chat' | 'code';
 
-const QUICK_PROMPTS: { label: string; text: string }[] = [
-  { label: 'Регистрация', text: 'Диаграмма последовательности регистрации пользователя с подтверждением email и отправкой SMS-кода' },
-  { label: 'Платеж', text: 'Поток оплаты: выбор товара, выставление счета, оплата картой, webhooks банка, обновление статуса заказа' },
-  { label: 'Микросервисы', text: 'Диаграмма контейнеров: API Gateway, Auth, Billing, Catalog, Notification сервисы и PostgreSQL, Redis, Kafka' },
-  { label: 'Инцидент', text: 'Блок-схема реагирования на инцидент: обнаружение, triage, уведомление on-call, фиксация RCA' },
-];
-
 const createId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
@@ -332,14 +325,6 @@ const App: React.FC = () => {
     [activeChat, updateChatCode]
   );
 
-  const handleQuickPrompt = useCallback((text: string) => {
-    setPrompt(text);
-    setActiveSidebarTab('chat');
-    requestAnimationFrame(() => {
-      promptInputRef.current?.focus();
-    });
-  }, []);
-
   const confirmDeleteChat = useCallback(() => {
     if (chatToDelete) {
       deleteChat(chatToDelete);
@@ -509,7 +494,7 @@ const App: React.FC = () => {
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                       <SparklesIcon />
                     </div>
-                    <p>Выберите быструю подсказку выше или опишите задачу.</p>
+                    <p>Опишите задачу для генерации диаграммы.</p>
                     <p className="mt-2 text-xs">Например: "Схема регистрации пользователя"</p>
                   </div>
                 )}
@@ -549,18 +534,6 @@ const App: React.FC = () => {
 
               {/* Input Area */}
               <div className="p-4 bg-white shrink-0 border-t border-slate-200 space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {QUICK_PROMPTS.map((item) => (
-                    <button
-                      key={item.label}
-                      onClick={() => handleQuickPrompt(item.text)}
-                      className="px-3 py-1.5 text-xs border border-slate-200 rounded-full bg-slate-50 hover:border-blue-200 hover:text-blue-600 transition-colors shadow-sm"
-                    >
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-
                 <div className="relative">
                   <textarea
                     ref={promptInputRef}
