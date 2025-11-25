@@ -161,8 +161,8 @@ Your support means the world to me and keeps this project alive and growing! ðŸ™
 
 ## ðŸŽ¯ Roadmap
 
-- [ ] Support for more diagram types
-- [ ] Export to PNG/SVG
+- [x] Support for more diagram types
+- [x] Export to PNG/SVG
 - [ ] Collaborative editing
 - [ ] Custom theme support
 - [ ] Integration with popular design tools
