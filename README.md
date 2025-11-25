@@ -58,7 +58,7 @@ AI UML Builder is a modern React application that converts natural language desc
 
 4. **Set up environment variables**
    
-   Create a `.env` file in the root directory:
+   Create a `.env.local` file in the root directory:
    ```env
    VITE_POLZA_API_KEY=your_api_key_here
    ```
