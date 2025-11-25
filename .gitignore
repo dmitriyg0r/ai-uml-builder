@@ -7,10 +7,26 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Dependencies
 node_modules
+
+# Build output
 dist
 dist-ssr
+dist-electron
+release
+
+# Environment
+.env
+.env.local
+.env*.local
 *.local
+
+# Icon generation artifacts
+icon.iconset
+icon.icns
+icon.ico
+icon-512.png
 
 # Editor directories and files
 .vscode/*
