@@ -38,7 +38,7 @@ AI UML Builder is a modern React application that converts natural language desc
 
 - **Windows**: `AI UML Builder.exe` (x64)
 - **macOS**: 
-  - Apple Silicon (M1/M2/M3): `mac-arm64`
+  - Apple Silicon (M series): `mac-arm64`
   - Intel: `mac`
 - **Linux**: `linux` (x64)
 
