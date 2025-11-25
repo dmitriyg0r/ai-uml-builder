@@ -30,15 +30,36 @@ AI UML Builder is a modern React application that converts natural language desc
 
 ## 🚀 Getting Started
 
-### Prerequisites
+### 💻 Desktop App (Recommended)
+
+**Download the latest release for your platform:**
+
+👉 **[Download from Releases](https://github.com/dmitriyg0r/ai-uml-builder/releases/latest)**
+
+- **Windows**: `AI UML Builder 0.0.0.exe` (x64)
+- **macOS**: 
+  - Apple Silicon (M1/M2/M3): `mac-arm64`
+  - Intel: `mac`
+- **Linux**: `linux-unpacked` (x64)
+
+> 💡 The desktop app comes with the API key pre-configured, so you can start using it immediately!
+
+### 🛠️ Development Setup
+
+If you want to run from source or contribute:
+
+<details>
+<summary>Click to expand development instructions</summary>
+
+#### Prerequisites
 
 - Node.js (LTS version recommended)
 
-### Installation
+#### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/ai-uml-builder.git
+   git clone https://github.com/dmitriyg0r/ai-uml-builder.git
    cd ai-uml-builder
    ```
 
@@ -71,6 +92,8 @@ AI UML Builder is a modern React application that converts natural language desc
    ```
    
    Open [http://localhost:3000](http://localhost:3000) in your browser.
+
+</details>
 
 ## 📖 Usage
 
@@ -106,6 +129,7 @@ ai-uml-builder/
 ## 🛠️ Tech Stack
 
 - **Frontend**: React 19 with TypeScript
+- **Desktop**: Electron
 - **Build Tool**: Vite
 - **Styling**: Tailwind CSS
 - **Diagrams**: Mermaid.js
@@ -116,9 +140,12 @@ ai-uml-builder/
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start development server |
-| `npm run build` | Build for production |
+| `npm run build` | Build web + Electron for all platforms |
+| `npm run build:mac` | Build for macOS (ARM64 + Intel) |
+| `npm run build:win` | Build for Windows (x64) |
+| `npm run build:linux` | Build for Linux (x64) |
+| `npm run build:all` | Build for all platforms |
 | `npm run preview` | Preview production build |
-| `npm run lint` | Run ESLint |
 
 ## 🤝 Support the Project
 
