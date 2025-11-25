@@ -8,6 +8,8 @@
 
 AI UML Builder is a modern React application that converts natural language descriptions into beautiful UML diagrams. Simply describe your system architecture, class structure, or workflow in plain text, and watch as AI generates precise Mermaid diagrams for you.
 
+![Demo](demo.gif)
+
 ![React](https://img.shields.io/badge/React-19-blue?logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-Latest-purple?logo=vite)
