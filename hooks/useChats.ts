@@ -1,184 +1,306 @@
-import { useCallback } from 'react';
-import { useLocalStorageState } from './useLocalStorageState';
-import { Chat, ChatState, ChatMessage } from '../types';
+import { useCallback, useEffect, useState } from 'react';
+import { supabase } from '../services/supabaseClient';
+import { useAuth } from './useAuth';
+import { Chat, ChatMessage } from '../types';
 
-const createId = () =>
-  typeof crypto !== 'undefined' && 'randomUUID' in crypto
-    ? crypto.randomUUID()
-    : Date.now().toString(36);
+interface LocalChat {
+  id: string;
+  name: string;
+  messages: ChatMessage[];
+  code: string;
+  createdAt: number;
+  updatedAt: number;
+}
 
-const createNewChat = (customName?: string): Chat => {
-  const now = Date.now();
-  return {
-    id: createId(),
-    name: customName || 'Новый чат',
-    messages: [],
-    code: '',
-    createdAt: now,
-    updatedAt: now,
-  };
-};
-
-// Миграция старых данных
-const migrateOldData = (): ChatState | null => {
+// Миграция старых данных из localStorage в Supabase
+const migrateLocalStorageData = async (userId: string): Promise<void> => {
   try {
+    const chatsStateRaw = localStorage.getItem('chats:state');
     const oldCode = localStorage.getItem('uml:code');
     const oldMessages = localStorage.getItem('uml:messages');
     
-    if (oldCode !== null || oldMessages !== null) {
+    const chatsToMigrate: LocalChat[] = [];
+    
+    // Проверяем новый формат (chats:state)
+    if (chatsStateRaw) {
+      const chatsState = JSON.parse(chatsStateRaw);
+      if (chatsState.chats && Array.isArray(chatsState.chats)) {
+        chatsToMigrate.push(...chatsState.chats);
+      }
+    }
+    // Проверяем старый формат (uml:code, uml:messages)
+    else if (oldCode !== null || oldMessages !== null) {
       const code = oldCode ? JSON.parse(oldCode) : '';
       const messages = oldMessages ? JSON.parse(oldMessages) : [];
-      
-      const now = Date.now();
-      const migratedChat: Chat = {
-        id: createId(),
+      chatsToMigrate.push({
+        id: crypto.randomUUID(),
         name: 'Новый чат',
         messages,
         code,
-        createdAt: now,
-        updatedAt: now,
-      };
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+    }
+    
+    // Загружаем чаты в Supabase
+    if (chatsToMigrate.length > 0) {
+      const migratedChats = chatsToMigrate.map((chat) => ({
+        id: crypto.randomUUID(), // Новый ID для Supabase
+        user_id: userId,
+        name: chat.name,
+        messages: chat.messages,
+        code: chat.code,
+        created_at: new Date(chat.createdAt).toISOString(),
+        updated_at: new Date(chat.updatedAt).toISOString(),
+      }));
       
-      // Удаляем старые ключи
+      await supabase.from('chats').insert(migratedChats);
+      
+      // Очищаем localStorage
+      localStorage.removeItem('chats:state');
       localStorage.removeItem('uml:code');
       localStorage.removeItem('uml:messages');
       
-      return {
-        chats: [migratedChat],
-        activeChatId: migratedChat.id,
-      };
+      console.log(`Migrated ${migratedChats.length} chats to Supabase`);
     }
   } catch (error) {
-    console.error('Error migrating old data:', error);
+    console.error('Error migrating localStorage data:', error);
   }
-  
-  return null;
-};
-
-const getInitialState = (): ChatState => {
-  // Проверяем миграцию
-  const migrated = migrateOldData();
-  if (migrated) {
-    return migrated;
-  }
-  
-  // Создаём первый чат по умолчанию
-  const firstChat = createNewChat();
-  return {
-    chats: [firstChat],
-    activeChatId: firstChat.id,
-  };
 };
 
 export const useChats = () => {
-  const [state, setState] = useLocalStorageState<ChatState>('chats:state', getInitialState());
+  const { user } = useAuth();
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [activeChatId, setActiveChatId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const activeChat = state.chats.find((chat) => chat.id === state.activeChatId) || state.chats[0];
+  const activeChat = chats.find((chat) => chat.id === activeChatId) || chats[0];
 
-  const createChat = useCallback((customName?: string) => {
-    const newChat = createNewChat(customName);
-    setState((prev) => ({
-      chats: [...prev.chats, newChat],
-      activeChatId: newChat.id,
-    }));
-    return newChat.id;
-  }, [setState]);
+  // Загрузка чатов при монтировании
+  useEffect(() => {
+    if (!user) {
+      setChats([]);
+      setActiveChatId(null);
+      setLoading(false);
+      return;
+    }
 
-  const switchChat = useCallback(
-    (chatId: string) => {
-      setState((prev) => ({
-        ...prev,
-        activeChatId: chatId,
-      }));
-    },
-    [setState]
-  );
-
-  const deleteChat = useCallback(
-    (chatId: string) => {
-      setState((prev) => {
-        const newChats = prev.chats.filter((chat) => chat.id !== chatId);
+    const loadChats = async () => {
+      try {
+        setLoading(true);
         
-        // Если удаляем последний чат, создаём новый
-        if (newChats.length === 0) {
-          const newChat = createNewChat();
-          return {
-            chats: [newChat],
-            activeChatId: newChat.id,
-          };
+        // Мигрируем данные из localStorage (если есть)
+        await migrateLocalStorageData(user.id);
+        
+        // Загружаем чаты
+        const { data, error: fetchError } = await supabase
+          .from('chats')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false });
+        
+        if (fetchError) throw fetchError;
+        
+        if (data && data.length > 0) {
+          setChats(data);
+          setActiveChatId(data[0].id);
+        } else {
+          // Создаем первый чат
+          const { data: newChatData, error: createError } = await supabase
+            .from('chats')
+            .insert({
+              user_id: user.id,
+              name: 'Новый чат',
+              messages: [],
+              code: '',
+            })
+            .select()
+            .single();
+          
+          if (createError) throw createError;
+          if (newChatData) {
+            setChats([newChatData]);
+            setActiveChatId(newChatData.id);
+          }
         }
-        
-        // Если удаляем активный чат, переключаемся на первый
-        const newActiveChatId = prev.activeChatId === chatId ? newChats[0].id : prev.activeChatId;
-        
-        return {
-          chats: newChats,
-          activeChatId: newActiveChatId,
-        };
-      });
-    },
-    [setState]
-  );
-
-  const renameChat = useCallback(
-    (chatId: string, newName: string) => {
-      setState((prev) => ({
-        ...prev,
-        chats: prev.chats.map((chat) =>
-          chat.id === chatId
-            ? { ...chat, name: newName, updatedAt: Date.now() }
-            : chat
-        ),
-      }));
-    },
-    [setState]
-  );
-
-  const updateChatMessages = useCallback(
-    (chatId: string, messages: ChatMessage[]) => {
-      setState((prev) => ({
-        ...prev,
-        chats: prev.chats.map((chat) =>
-          chat.id === chatId
-            ? { ...chat, messages, updatedAt: Date.now() }
-            : chat
-        ),
-      }));
-    },
-    [setState]
-  );
-
-  const updateChatCode = useCallback(
-    (chatId: string, code: string) => {
-      setState((prev) => ({
-        ...prev,
-        chats: prev.chats.map((chat) =>
-          chat.id === chatId
-            ? { ...chat, code, updatedAt: Date.now() }
-            : chat
-        ),
-      }));
-    },
-    [setState]
-  );
-
-  const clearCurrentChat = useCallback(() => {
-    if (!activeChat) return;
+      } catch (err) {
+        console.error('Error loading chats:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load chats');
+      } finally {
+        setLoading(false);
+      }
+    };
     
-    setState((prev) => ({
-      ...prev,
-      chats: prev.chats.map((chat) =>
-        chat.id === activeChat.id
-          ? { ...chat, messages: [], code: '', updatedAt: Date.now() }
-          : chat
-      ),
-    }));
-  }, [activeChat, setState]);
+    loadChats();
+  }, [user]);
+
+  const createChat = useCallback(async (customName?: string) => {
+    if (!user) return null;
+    
+    try {
+      const { data, error } = await supabase
+        .from('chats')
+        .insert({
+          user_id: user.id,
+          name: customName || 'Новый чат',
+          messages: [],
+          code: '',
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      if (data) {
+        setChats((prev) => [data, ...prev]);
+        setActiveChatId(data.id);
+        return data.id;
+      }
+    } catch (err) {
+      console.error('Error creating chat:', err);
+      setError(err instanceof Error ? err.message : 'Failed to create chat');
+    }
+    return null;
+  }, [user]);
+
+  const switchChat = useCallback((chatId: string) => {
+    setActiveChatId(chatId);
+  }, []);
+
+  const deleteChat = useCallback(async (chatId: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('chats')
+        .delete()
+        .eq('id', chatId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      const newChats = chats.filter((chat) => chat.id !== chatId);
+      setChats(newChats);
+      
+      // Если удаляем последний чат, создаем новый
+      if (newChats.length === 0) {
+        await createChat();
+      } else if (activeChatId === chatId) {
+        // Переключаемся на первый
+        setActiveChatId(newChats[0].id);
+      }
+    } catch (err) {
+      console.error('Error deleting chat:', err);
+      setError(err instanceof Error ? err.message : 'Failed to delete chat');
+    }
+  }, [user, chats, activeChatId, createChat]);
+
+  const renameChat = useCallback(async (chatId: string, newName: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('chats')
+        .update({ name: newName })
+        .eq('id', chatId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
+            ? { ...chat, name: newName, updated_at: new Date().toISOString() }
+            : chat
+        )
+      );
+    } catch (err) {
+      console.error('Error renaming chat:', err);
+      setError(err instanceof Error ? err.message : 'Failed to rename chat');
+    }
+  }, [user]);
+
+  const updateChatMessages = useCallback(async (chatId: string, messages: ChatMessage[]) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('chats')
+        .update({ messages })
+        .eq('id', chatId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
+            ? { ...chat, messages, updated_at: new Date().toISOString() }
+            : chat
+        )
+      );
+    } catch (err) {
+      console.error('Error updating messages:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update messages');
+    }
+  }, [user]);
+
+  const updateChatCode = useCallback(async (chatId: string, code: string) => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('chats')
+        .update({ code })
+        .eq('id', chatId)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
+            ? { ...chat, code, updated_at: new Date().toISOString() }
+            : chat
+        )
+      );
+    } catch (err) {
+      console.error('Error updating code:', err);
+      setError(err instanceof Error ? err.message : 'Failed to update code');
+    }
+  }, [user]);
+
+  const clearCurrentChat = useCallback(async () => {
+    if (!activeChat || !user) return;
+    
+    try {
+      const { error } = await supabase
+        .from('chats')
+        .update({ messages: [], code: '' })
+        .eq('id', activeChat.id)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === activeChat.id
+            ? { ...chat, messages: [], code: '', updated_at: new Date().toISOString() }
+            : chat
+        )
+      );
+    } catch (err) {
+      console.error('Error clearing chat:', err);
+      setError(err instanceof Error ? err.message : 'Failed to clear chat');
+    }
+  }, [activeChat, user]);
 
   return {
-    chats: state.chats,
+    chats,
     activeChat,
-    activeChatId: state.activeChatId,
+    activeChatId,
+    loading,
+    error,
     createChat,
     switchChat,
     deleteChat,

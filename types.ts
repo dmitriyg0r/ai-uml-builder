@@ -29,11 +29,12 @@ export interface ChatMessage {
 
 export interface Chat {
   id: string;
+  user_id: string;
   name: string;
   messages: ChatMessage[];
   code: string;
-  createdAt: number;
-  updatedAt: number;
+  created_at: string; // ISO timestamp from Supabase
+  updated_at: string; // ISO timestamp from Supabase
 }
 
 export interface ChatState {

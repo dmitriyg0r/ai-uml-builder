@@ -105,6 +105,7 @@ const App: React.FC = () => {
   const {
     chats,
     activeChat,
+    loading: chatsLoading,
     createChat,
     switchChat,
     deleteChat,
@@ -389,8 +390,16 @@ const App: React.FC = () => {
       <div
         className={`${
           isSidebarOpen ? 'flex' : 'hidden'
-        } absolute md:static inset-y-0 left-0 w-full md:w-[380px] flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 shrink-0`}
+        } absolute md:static inset-y-0 left-0 w-full md:w-[380px] flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 shrink-0 relative`}
       >
+        {chatsLoading && (
+          <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="flex flex-col items-center gap-3">
+              <LoadingSpinner />
+              <span className="text-sm text-slate-600">Загрузка чатов...</span>
+            </div>
+          </div>
+        )}
 
         {/* Header */}
         <div className="p-4 border-b border-slate-100 shrink-0 flex flex-col gap-3">
@@ -457,7 +466,7 @@ const App: React.FC = () => {
                       >
                         <div className="font-medium text-slate-700 truncate">{chat.name}</div>
                         <div className="text-xs text-slate-400">
-                          {new Date(chat.updatedAt).toLocaleDateString('ru-RU', {
+                          {new Date(chat.updated_at).toLocaleDateString('ru-RU', {
                             day: 'numeric',
                             month: 'short',
                             hour: '2-digit',
