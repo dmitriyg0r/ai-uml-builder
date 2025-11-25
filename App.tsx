@@ -6,6 +6,8 @@ import { ConfirmationModal } from './components/ConfirmationModal';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
 import { useDiagramExport } from './hooks/useDiagramExport';
 import { useChats } from './hooks/useChats';
+import { useAuth } from './hooks/useAuth';
+import { AuthModal } from './components/Auth/AuthModal';
 import { ChatMessage } from './types';
 
 const MermaidRenderer = React.lazy(() => import('./components/MermaidRenderer'));
@@ -120,6 +122,9 @@ const App: React.FC = () => {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isChatsDropdownOpen, setIsChatsDropdownOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  const { user, signOut } = useAuth();
 
   // Memoize setError to prevent MermaidRenderer re-renders
   const handleError = useCallback((err: string | null) => {
@@ -189,6 +194,13 @@ const App: React.FC = () => {
   }, [isChatsDropdownOpen]);
 
   const handleGenerate = useCallback(async () => {
+    // Проверяем авторизацию
+    if (!user) {
+      setError('Войдите в аккаунт, чтобы использовать ИИ-генерацию');
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     const trimmed = prompt.trim();
     if (!trimmed || isLoading || !activeChat) return;
     const isUpdate = Boolean(renderedCode.trim() || currentCode.trim());
@@ -253,7 +265,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [prompt, isLoading, renderedCode, currentCode, messages, activeChat, updateChatMessages, updateChatCode, flush]);
+  }, [prompt, isLoading, renderedCode, currentCode, messages, activeChat, updateChatMessages, updateChatCode, flush, user, renameChat]);
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -492,7 +504,25 @@ const App: React.FC = () => {
           }`}>
             {/* Chat History */}
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-                {messages.length === 0 && (
+                {messages.length === 0 && !user && (
+                  <div className="text-center mt-10 text-slate-600 text-sm px-4">
+                    <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 border-2 border-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-blue-600">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-lg font-semibold text-slate-700 mb-2">Требуется авторизация</h3>
+                    <p className="text-slate-500 mb-4">Войдите в аккаунт, чтобы использовать ИИ для генерации диаграмм</p>
+                    <button
+                      onClick={() => setIsAuthModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                    >
+                      <UserIcon />
+                      <span>Войти в аккаунт</span>
+                    </button>
+                  </div>
+                )}
+                {messages.length === 0 && user && (
                   <div className="text-center mt-10 text-slate-400 text-sm px-4">
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                       <SparklesIcon />
@@ -537,12 +567,23 @@ const App: React.FC = () => {
 
               {/* Input Area */}
               <div className="p-4 bg-white shrink-0 border-t border-slate-200 space-y-3">
+                {!user && (
+                  <div className="p-3 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-lg flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 flex-shrink-0">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+                    </svg>
+                    <span>Войдите в аккаунт, чтобы использовать ИИ-генерацию</span>
+                  </div>
+                )}
                 <div className="relative">
                   <textarea
                     ref={promptInputRef}
                     id="prompt"
-                    className="w-full p-3 pr-12 border border-slate-200 rounded-xl bg-slate-50 text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[90px]"
-                    placeholder={currentCode ? 'Попросите улучшить диаграмму или добавить детали...' : 'Опишите диаграмму...'}
+                    disabled={!user}
+                    className={`w-full p-3 pr-12 border border-slate-200 rounded-xl text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[90px] ${
+                      user ? 'bg-slate-50' : 'bg-slate-100 cursor-not-allowed opacity-60'
+                    }`}
+                    placeholder={!user ? 'Войдите, чтобы использовать ИИ...' : (currentCode ? 'Попросите улучшить диаграмму или добавить детали...' : 'Опишите диаграмму...')}
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -559,15 +600,15 @@ const App: React.FC = () => {
                   ) : (
                     <button
                       onClick={handleGenerate}
-                      disabled={!prompt.trim()}
+                      disabled={!prompt.trim() || !user}
                       className={`
                         absolute bottom-3 right-3 p-2 rounded-lg text-white transition-all transform active:scale-90
-                        ${!prompt.trim() 
+                        ${!prompt.trim() || !user
                           ? 'bg-slate-300 cursor-not-allowed' 
                           : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
                         }
                       `}
-                      title="Отправить (Ctrl + Enter)"
+                      title={!user ? 'Войдите, чтобы использовать ИИ' : 'Отправить (Ctrl + Enter)'}
                       aria-label="Отправить сообщение"
                     >
                       <SendIcon />
@@ -702,6 +743,32 @@ const App: React.FC = () => {
               <TrashIcon />
               <span className="text-sm font-medium">Сброс</span>
             </button>
+
+            {/* Auth Button */}
+            {user ? (
+              <div className="flex items-center gap-2">
+                <div className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 flex items-center gap-2">
+                  <UserIcon />
+                  <span className="font-medium">{user.email?.split('@')[0]}</span>
+                </div>
+                <button
+                  onClick={() => signOut()}
+                  className="px-3 py-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors flex items-center gap-2 shadow-sm"
+                  title="Выйти из аккаунта"
+                >
+                  <span className="text-sm font-medium">Выйти</span>
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
+                title="Войти в аккаунт"
+              >
+                <UserIcon />
+                <span className="text-sm font-medium">Войти</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -734,6 +801,9 @@ const App: React.FC = () => {
           onClick={() => setIsSidebarOpen(false)}
         ></div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </div>
   );
 };
