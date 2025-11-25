@@ -9,7 +9,7 @@ AI UML Builder is a modern React application that converts natural language desc
 ![Vite](https://img.shields.io/badge/Vite-Latest-purple?logo=vite)
 ![License](https://img.shields.io/badge/License-MIT-green)
 
-**Keywords**: `ai` `artificial-intelligence` `uml` `uml-diagrams` `diagram-generator` `mermaid` `mermaid-js` `react` `typescript` `vite` `deepseek` `code-visualization` `software-architecture` `developer-tools` `llm` `ai-powered` `architecture-diagrams` `flowchart` `sequence-diagram` `class-diagram` `tailwindcss` `polza-ai` `natural-language-processing` `documentation` `code-generation`
+
 
 ## ✨ Features
 
