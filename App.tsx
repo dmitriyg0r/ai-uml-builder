@@ -140,7 +140,7 @@ const App: React.FC = () => {
 
   const currentCode = activeChat?.code || '';
   const messages = activeChat?.messages || [];
-  const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 800);
+  const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 300);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');

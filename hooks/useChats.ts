@@ -401,6 +401,10 @@ export const useChats = () => {
     async (chatId: string, code: string) => {
       if (!user) {
         setChats((prev) => {
+          // Check if code has actually changed to avoid unnecessary updates
+          const targetChat = prev.find((chat) => chat.id === chatId);
+          if (targetChat?.code === code) return prev;
+          
           const updated = prev.map((chat) =>
             chat.id === chatId ? { ...chat, code, updated_at: new Date().toISOString() } : chat
           );
@@ -411,6 +415,10 @@ export const useChats = () => {
       }
       
       try {
+        // Check if code has actually changed before making DB call
+        const targetChat = chats.find((chat) => chat.id === chatId);
+        if (targetChat?.code === code) return;
+        
         const { error } = await supabase
           .from('chats')
           .update({ code })
@@ -431,7 +439,7 @@ export const useChats = () => {
         setError(err instanceof Error ? err.message : 'Failed to update code');
       }
     },
-    [user, activeChatId]
+    [user, activeChatId, chats]
   );
 
   const clearCurrentChat = useCallback(async () => {
