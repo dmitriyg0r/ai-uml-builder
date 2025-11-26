@@ -125,6 +125,11 @@ const App: React.FC = () => {
   const [isChatsDropdownOpen, setIsChatsDropdownOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const guestRequestLimit = 3;
+  const [guestRequestCount, setGuestRequestCount] = useState(() => {
+    const stored = localStorage.getItem('guest:ai-requests');
+    return stored ? parseInt(stored, 10) || 0 : 0;
+  });
 
   const { user, signOut } = useAuth();
 
@@ -155,6 +160,10 @@ const App: React.FC = () => {
   });
 
   const { exportDiagram, isExporting } = useDiagramExport({ setError });
+  const guestRequestsLeft = Math.max(0, guestRequestLimit - guestRequestCount);
+  const isGuestLimitReached = !user && guestRequestCount >= guestRequestLimit;
+  const isGuest = !user;
+  const inputDisabled = isGuestLimitReached;
 
   const hasDiagram = Boolean(renderedCode.trim());
   const hasHistory = messages.length > 0;
@@ -213,16 +222,32 @@ const App: React.FC = () => {
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [isProfileMenuOpen]);
 
-  const handleGenerate = useCallback(async () => {
-    // Проверяем авторизацию
+  // Синхронизация лимита запросов для гостя
+  useEffect(() => {
+    if (user) {
+      setGuestRequestCount(0);
+      localStorage.removeItem('guest:ai-requests');
+      return;
+    }
+    const stored = localStorage.getItem('guest:ai-requests');
+    setGuestRequestCount(stored ? parseInt(stored, 10) || 0 : 0);
+  }, [user]);
+
+  useEffect(() => {
     if (!user) {
-      setError('Войдите в аккаунт, чтобы использовать ИИ-генерацию');
+      localStorage.setItem('guest:ai-requests', guestRequestCount.toString());
+    }
+  }, [guestRequestCount, user]);
+
+  const handleGenerate = useCallback(async () => {
+    const trimmed = prompt.trim();
+    if (!trimmed || isLoading || !activeChat) return;
+
+    if (!user && guestRequestCount >= guestRequestLimit) {
+      setError('В гостевом режиме доступно 3 ИИ-запроса. Войдите или зарегистрируйтесь, чтобы продолжить.');
       setIsAuthModalOpen(true);
       return;
     }
-
-    const trimmed = prompt.trim();
-    if (!trimmed || isLoading || !activeChat) return;
     const isUpdate = Boolean(renderedCode.trim() || currentCode.trim());
 
     const userMessage: ChatMessage = {
@@ -285,7 +310,15 @@ const App: React.FC = () => {
       setIsLoading(false);
       abortControllerRef.current = null;
     }
-  }, [prompt, isLoading, renderedCode, currentCode, messages, activeChat, updateChatMessages, updateChatCode, flush, user, renameChat]);
+    if (!user) {
+      const nextCount = guestRequestCount + 1;
+      setGuestRequestCount(nextCount);
+      if (nextCount >= guestRequestLimit) {
+        // Небольшая задержка, чтобы пользователь увидел результат перед модалкой
+        setTimeout(() => setIsAuthModalOpen(true), 150);
+      }
+    }
+  }, [prompt, isLoading, renderedCode, currentCode, messages, activeChat, updateChatMessages, updateChatCode, flush, user, renameChat, guestRequestCount, guestRequestLimit]);
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -438,16 +471,22 @@ const App: React.FC = () => {
             {isChatsDropdownOpen && (
               <div className="chats-dropdown absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-64 overflow-y-auto z-30">
                 <div className="p-2">
-                  <button
-                    onClick={() => {
-                      createChat();
-                      setIsChatsDropdownOpen(false);
-                    }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                  >
-                    <PlusIcon />
-                    <span>Новый чат</span>
-                  </button>
+                  {user ? (
+                    <button
+                      onClick={() => {
+                        createChat();
+                        setIsChatsDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                    >
+                      <PlusIcon />
+                      <span>Новый чат</span>
+                    </button>
+                  ) : (
+                    <div className="w-full px-3 py-2 text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-lg">
+                      В гостевом режиме доступен один чат. Войдите, чтобы создавать несколько диаграмм.
+                    </div>
+                  )}
                 </div>
                 <div className="border-t border-slate-100">
                   {chats.map((chat) => (
@@ -534,20 +573,27 @@ const App: React.FC = () => {
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
                 {messages.length === 0 && !user && (
                   <div className="text-center mt-10 text-slate-600 text-sm px-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-blue-50 border-2 border-blue-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-blue-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-blue-50 border-2 border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-emerald-600">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a3 3 0 110 6 3 3 0 010-6z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5c-4.97 0-9 3.134-9 7 0 2.092 1.178 3.954 3.054 5.196.399.268.664.712.664 1.2v1.479c0 .856.92 1.4 1.666.97l1.89-1.09a2.25 2.25 0 011.125-.3h1.395c4.97 0 9-3.134 9-7s-4.03-7-9-7z" />
                       </svg>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-2">Требуется авторизация</h3>
-                    <p className="text-slate-500 mb-4">Войдите в аккаунт, чтобы использовать ИИ для генерации диаграмм</p>
-                    <button
-                      onClick={() => setIsAuthModalOpen(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-                    >
-                      <UserIcon />
-                      <span>Войти в аккаунт</span>
-                    </button>
+                    <h3 className="text-lg font-semibold text-slate-700 mb-2">Гостевой режим</h3>
+                    <p className="text-slate-500 mb-3">
+                      Доступно {guestRequestsLeft} из {guestRequestLimit} ИИ-запросов без регистрации.
+                    </p>
+                    <p className="text-slate-500 mb-4">После входа текущая диаграмма сохранится в вашем аккаунте.</p>
+                    <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+                      <button
+                        onClick={() => setIsAuthModalOpen(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                      >
+                        <UserIcon />
+                        <span>Войти или зарегистрироваться</span>
+                      </button>
+                      <span className="text-xs text-slate-400">или попробуйте бесплатно</span>
+                    </div>
                   </div>
                 )}
                 {messages.length === 0 && user && (
@@ -595,23 +641,23 @@ const App: React.FC = () => {
 
               {/* Input Area */}
               <div className="p-4 bg-white shrink-0 border-t border-slate-200 space-y-3">
-                {!user && (
-                  <div className="p-3 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-lg flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5 flex-shrink-0">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
-                    </svg>
-                    <span>Войдите в аккаунт, чтобы использовать ИИ-генерацию</span>
-                  </div>
-                )}
                 <div className="relative">
                   <textarea
                     ref={promptInputRef}
                     id="prompt"
-                    disabled={!user}
+                    disabled={inputDisabled}
                     className={`w-full p-3 pr-12 border border-slate-200 rounded-xl text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[90px] ${
-                      user ? 'bg-slate-50' : 'bg-slate-100 cursor-not-allowed opacity-60'
+                      inputDisabled ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'
                     }`}
-                    placeholder={!user ? 'Войдите, чтобы использовать ИИ...' : (currentCode ? 'Попросите улучшить диаграмму или добавить детали...' : 'Опишите диаграмму...')}
+                    placeholder={
+                      isGuest
+                        ? isGuestLimitReached
+                          ? 'Лимит запросов исчерпан. Войдите, чтобы продолжить.'
+                          : `Опишите диаграмму... (осталось ${guestRequestsLeft} из ${guestRequestLimit})`
+                        : currentCode
+                          ? 'Попросите улучшить диаграмму или добавить детали...'
+                          : 'Опишите диаграмму...'
+                    }
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
                     onKeyDown={handleKeyDown}
@@ -628,15 +674,15 @@ const App: React.FC = () => {
                   ) : (
                     <button
                       onClick={handleGenerate}
-                      disabled={!prompt.trim() || !user}
+                      disabled={!prompt.trim() || inputDisabled}
                       className={`
                         absolute bottom-3 right-3 p-2 rounded-lg text-white transition-all transform active:scale-90
-                        ${!prompt.trim() || !user
+                        ${!prompt.trim() || inputDisabled
                           ? 'bg-slate-300 cursor-not-allowed' 
                           : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
                         }
                       `}
-                      title={!user ? 'Войдите, чтобы использовать ИИ' : 'Отправить (Ctrl + Enter)'}
+                      title={isGuestLimitReached ? 'Лимит гостевых запросов. Войдите, чтобы продолжить.' : 'Отправить (Ctrl + Enter)'}
                       aria-label="Отправить сообщение"
                     >
                       <SendIcon />
