@@ -226,7 +226,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({ value, onChan
         </div>
         
         {/* Code editor */}
-        <div className="flex-1 relative overflow-hidden">
+        <div className="flex-1 relative overflow-hidden code-editor-scroll">
           <div className="absolute inset-0 overflow-auto" style={{ padding: '12px' }}>
             {/* Syntax highlighting layer */}
             <div
