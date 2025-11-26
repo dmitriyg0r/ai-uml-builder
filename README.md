@@ -1,48 +1,99 @@
 # 🎨 AI UML Builder
 
 <div align="center">
-  <img src="logoname.png" alt="Dream AI Logo" width="600"/>
+  <img src="logoname.png" alt="AI UML Builder Logo" width="600"/>
+  
+  <p align="center">
+    <strong>Transform your ideas into professional diagrams with AI</strong>
+  </p>
+  
+  <p align="center">
+    <a href="#-key-features">Features</a> •
+    <a href="#-quick-start">Quick Start</a> •
+    <a href="#-demo">Demo</a> •
+    <a href="#-documentation">Docs</a> •
+    <a href="#-contributing">Contributing</a>
+  </p>
+
+  ![React](https://img.shields.io/badge/React-19-blue?logo=react)
+  ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
+  ![Electron](https://img.shields.io/badge/Electron-Desktop-47848F?logo=electron)
+  ![License](https://img.shields.io/badge/License-Proprietary-red)
+  [![GitHub stars](https://img.shields.io/github/stars/dmitriyg0r/ai-uml-builder?style=social)](https://github.com/dmitriyg0r/ai-uml-builder/stargazers)
+
 </div>
 
-> Transform your ideas into professional UML diagrams using the power of AI
+---
 
-AI UML Builder is a modern React application that converts natural language descriptions into beautiful UML diagrams. Simply describe your system architecture, class structure, or workflow in plain text, and watch as AI generates precise Mermaid diagrams for you.
+## 💡 What is AI UML Builder?
+
+AI UML Builder is a **powerful desktop application** that converts natural language descriptions into beautiful, professional diagrams. No more struggling with complex diagramming tools—just describe what you need in plain English (or Russian!), and let AI do the heavy lifting.
+
+**Perfect for:**
+- 👨‍💻 Software developers documenting architecture
+- 📚 Students learning UML and system design
+- 🏢 Technical writers creating documentation
+- 👥 Teams collaborating on system design
 
 ![Demo](demo.gif)
 
-![React](https://img.shields.io/badge/React-19-blue?logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-Latest-purple?logo=vite)
-![License](https://img.shields.io/badge/License-MIT-green)
 
 
+## 🎯 Key Features
 
-## ✨ Features
+### 🤖 AI-Powered Intelligence
+- **Natural Language Processing** - Describe your diagram in plain English or Russian
+- **Context-Aware Generation** - AI understands complex system architectures
+- **Iterative Refinement** - Ask for changes and improvements naturally
+- **Smart Formatting** - Auto-formats code for readability
 
-- 🤖 **AI-Powered Generation** - Leverages DeepSeek AI through Polza API to understand your descriptions
-- 📊 **Multiple Diagram Types** - Supports class diagrams, sequence diagrams, flowcharts, and more
-- 🎯 **Instant Visualization** - Real-time rendering with Mermaid.js
-- ✏️ **Live Editor** - Edit generated Mermaid code directly in the browser
-- 💾 **Auto-Save** - Your work is automatically saved to localStorage
-- 🇷🇺 **GOST Standards** - Follows GOST R 52573-2006 for Russian language prompts
-- 🌓 **Modern UI** - Clean, responsive interface built with Tailwind CSS
-- 🔄 **Iterative Updates** - Refine your diagrams by describing changes
+### 📊 Comprehensive Diagram Support
+- **Class Diagrams** - Model object-oriented systems
+- **Sequence Diagrams** - Visualize interactions and workflows
+- **Flowcharts** - Map out processes and decision trees
+- **ER Diagrams** - Design database schemas
+- **State Diagrams** - Model system states and transitions
+- **And many more!** - Full Mermaid.js support
 
-## 🚀 Getting Started
+### 💻 Desktop-First Experience
+- **Cross-Platform** - Works on Windows, macOS (Intel & Apple Silicon), and Linux
+- **Offline Editing** - Edit diagrams without internet (generation requires API)
+- **Native Performance** - Built with Electron for smooth experience
+- **User Authentication** - Save and sync your diagrams with Supabase
 
-### 💻 Desktop App (Recommended)
+### 🎨 Professional Editing Tools
+- **Syntax Highlighting** - Color-coded Mermaid editor
+- **Live Preview** - See changes instantly with debounced rendering
+- **Manual Control** - Run button for precise control over updates
+- **Zoom & Pan** - Navigate large diagrams easily
+- **Export Options** - Save as SVG or PNG
 
-**Download the latest release for your platform:**
+### 🔐 Privacy & Security
+- **Guest Mode** - Try without registration (3 AI requests)
+- **Secure Auth** - Optional Supabase authentication
+- **Local Storage** - Your data stays on your device in guest mode
+- **API Key Safety** - Environment variables for sensitive data
 
-👉 **[Download from Releases](https://github.com/dmitriyg0r/ai-uml-builder/releases/latest)**
+## 🚀 Quick Start
 
-- **Windows**: `AI UML Builder.exe` (x64)
-- **macOS**: 
-  - Apple Silicon (M series): `mac-arm64`
-  - Intel: `mac`
-- **Linux**: `linux` (x64)
+### 📥 Download (Recommended)
 
-> 💡 The desktop app comes with the API key pre-configured, so you can start using it immediately!
+**Get the latest release for your platform:**
+
+<div align="center">
+
+[![Download for macOS](https://img.shields.io/badge/Download-macOS-black?style=for-the-badge&logo=apple)](https://github.com/dmitriyg0r/ai-uml-builder/releases/latest)
+[![Download for Windows](https://img.shields.io/badge/Download-Windows-blue?style=for-the-badge&logo=windows)](https://github.com/dmitriyg0r/ai-uml-builder/releases/latest)
+[![Download for Linux](https://img.shields.io/badge/Download-Linux-orange?style=for-the-badge&logo=linux)](https://github.com/dmitriyg0r/ai-uml-builder/releases/latest)
+
+</div>
+
+**Platform-specific builds:**
+- 🍎 **macOS**: Apple Silicon (`mac-arm64`) and Intel (`mac`)
+- 🪟 **Windows**: x64 installer
+- 🐧 **Linux**: x64 AppImage/deb
+
+> 💡 **No setup required!** The desktop app comes ready to use immediately.
 
 ### 🛠️ Development Setup
 
@@ -95,45 +146,103 @@ If you want to run from source or contribute:
 
 </details>
 
-## 📖 Usage
+## 📖 How to Use
 
-1. **Enter a Description**: Type your system description in natural language
+### Basic Workflow
+
+1. **💬 Describe Your Diagram**
+   ```text
+   Create a class diagram for an e-commerce system with User, Product, 
+   Order, and Payment classes. Users can place orders containing products.
    ```
-   Create a class diagram for an e-commerce system with User, Product, Order, and Payment classes
+
+2. **✨ Generate with AI**
+   - Click the send button (or press Ctrl+Enter)
+   - Watch as AI creates your diagram
+   - Guest users get 3 free AI requests
+
+3. **✏️ Edit the Code**
+   - Switch to the "Code" tab
+   - Make manual adjustments to the Mermaid code
+   - Click the green "Run" button to update the diagram
+
+4. **🎨 Refine with AI**
+   ```text
+   Add a shopping cart class that connects users and products
    ```
 
-2. **Generate**: Click the generate button and watch AI create your diagram
+5. **💾 Export Your Work**
+   - **SVG**: Vector format for documentation
+   - **PNG**: Raster image for presentations
+   - **Copy Code**: Use in other Mermaid tools
 
-3. **Edit & Refine**: Use the built-in editor to make manual adjustments or ask AI to update the diagram
+### Example Prompts
 
-4. **Export**: Copy the Mermaid code or take a screenshot of your diagram
+<details>
+<summary>📝 Class Diagrams</summary>
 
-## 🏗️ Architecture
+```text
+Create a class diagram for a library management system with 
+Book, Member, Loan, and Librarian classes
+```
+</details>
+
+<details>
+<summary>🔄 Sequence Diagrams</summary>
+
+```text
+Sequence diagram for user authentication: user enters credentials,
+system validates, checks database, returns token
+```
+</details>
+
+<details>
+<summary>📊 Flowcharts</summary>
+
+```text
+Flowchart for order processing: receive order, check inventory,
+if available then process payment and ship, else notify customer
+```
+</details>
+
+## 🏗️ Project Structure
 
 ```
 ai-uml-builder/
-├── src/
-│   ├── components/        # React components
-│   │   ├── MermaidRenderer.tsx
-│   │   ├── Editor.tsx
-│   │   ├── Sidebar.tsx
-│   │   └── ...
-│   ├── services/          # API integrations
-│   │   └── aisetService.ts
-│   ├── hooks/            # Custom React hooks
-│   │   └── useLocalStorageState.ts
-│   └── App.tsx           # Main application
-└── dist/                 # Production build
+├── components/           # React components
+│   ├── Auth/            # Authentication UI
+│   ├── Editor.tsx       # Code editor with syntax highlighting
+│   ├── MermaidRenderer.tsx  # Diagram rendering
+│   └── ...
+├── hooks/               # Custom React hooks
+│   ├── useAuth.tsx     # Authentication state
+│   ├── useChats.ts     # Chat/diagram management
+│   └── useDebouncedValue.ts
+├── services/            # External integrations
+│   ├── aisetService.ts # Polza AI API
+│   └── supabaseClient.ts # Database connection
+├── electron/            # Electron main process
+└── types.ts            # TypeScript definitions
 ```
 
 ## 🛠️ Tech Stack
 
-- **Frontend**: React 19 with TypeScript
-- **Desktop**: Electron
-- **Build Tool**: Vite
-- **Styling**: Tailwind CSS
-- **Diagrams**: Mermaid.js
-- **AI**: DeepSeek (via Polza API)
+### Core Technologies
+- ⚛️ **React 19** - Modern UI framework with hooks
+- 📘 **TypeScript** - Type-safe development
+- ⚡ **Vite** - Lightning-fast build tool
+- 🖥️ **Electron** - Cross-platform desktop app
+
+### Key Libraries
+- 🎨 **Tailwind CSS** - Utility-first styling
+- 📊 **Mermaid.js** - Diagram rendering engine
+- 🎯 **Prism.js** - Syntax highlighting
+- 🔍 **react-zoom-pan-pinch** - Diagram navigation
+
+### Backend Services
+- 🤖 **Polza AI** - DeepSeek AI integration
+- 🗄️ **Supabase** - Authentication and database
+- 🔐 **Row Level Security** - Data protection
 
 ## 📜 Available Scripts
 
@@ -147,29 +256,77 @@ ai-uml-builder/
 | `npm run build:all` | Build for all platforms |
 | `npm run preview` | Preview production build |
 
-## 🤝 Support the Project
+## 🤝 Contributing
 
-If you find this project helpful, please consider supporting its development!
+We welcome contributions from the community! Whether it's:
 
-### ☕ Buy me a coffee
+- 🐛 Bug reports
+- 💡 Feature suggestions
+- 📝 Documentation improvements
+- 🔧 Code contributions
 
-Every contribution helps me dedicate more time to improving this tool and creating new features.
+**Get started:**
+1. Read our [Contributing Guide](CONTRIBUTING.md)
+2. Check out [open issues](https://github.com/dmitriyg0r/ai-uml-builder/issues)
+3. Join [Discussions](https://github.com/dmitriyg0r/ai-uml-builder/discussions)
 
-**[💝 Support via DonationAlerts](https://www.donationalerts.com/r/dmitriygor)**
+### 🌟 Show Your Support
 
-Your support means the world to me and keeps this project alive and growing! 🙏
+If you find AI UML Builder helpful:
 
-## 🎯 Roadmap
+- ⭐ **Star this repository** - It helps others discover the project!
+- 🐦 **Share on social media** - Spread the word
+- ☕ **[Buy me a coffee](https://www.donationalerts.com/r/dmitriygor)** - Support development
+- 📝 **Write a blog post** - Share your experience
 
-- [x] Support for more diagram types
+Every star, share, and contribution helps make this project better! 🙏
+
+## 🗺️ Roadmap
+
+### ✅ Completed
+- [x] AI-powered diagram generation
+- [x] Multi-chat support with history
+- [x] User authentication (Supabase)
 - [x] Export to PNG/SVG
-- [ ] Collaborative editing
-- [ ] Custom theme support
-- [ ] Integration with popular design tools
+- [x] Syntax-highlighted code editor
+- [x] Guest mode (3 free requests)
+- [x] Auto-scaling diagrams
+- [x] Desktop apps (Win/Mac/Linux)
+
+### 🚧 In Progress
+- [ ] Dark/light theme toggle
+- [ ] More diagram templates
+- [ ] Diagram versioning
+
+### 💭 Planned
+- [ ] Collaborative real-time editing
+- [ ] Custom AI model selection
+- [ ] Integration with GitHub/GitLab
+- [ ] Plugin system for extensions
+- [ ] Mobile companion app
+- [ ] Cloud diagram storage
+- [ ] Team workspaces
+
+**Have ideas?** Open a [feature request](https://github.com/dmitriyg0r/ai-uml-builder/issues/new?template=feature_request.md)!
 
 ## 📝 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under a **Proprietary License**.
+
+**You may:**
+- ✅ Use for personal, non-commercial purposes
+- ✅ View and study the source code
+- ✅ Modify for personal use
+- ✅ Contribute via pull requests
+
+**You may NOT:**
+- ❌ Distribute the software or modified versions
+- ❌ Use for commercial purposes without permission
+- ❌ Sell or redistribute binaries
+
+For commercial licensing, please contact **dmitriyg0r@yandex.ru**
+
+See the [LICENSE](LICENSE) file for full details.
 
 ## 🙌 Acknowledgments
 
