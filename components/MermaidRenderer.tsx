@@ -24,6 +24,9 @@ const ResetIcon = () => (
 const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onError }) => {
   const [svg, setSvg] = useState<string>('');
   const [isRendering, setIsRendering] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
+  const [initialScale, setInitialScale] = useState(1);
+  const containerRef = React.useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     mermaid.initialize({
@@ -53,6 +56,45 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
         if (!cancelled) {
           setSvg(svgContent);
           onError?.('');
+          
+          // Calculate scale to fit diagram
+          setTimeout(() => {
+            if (containerRef.current) {
+              const parser = new DOMParser();
+              const svgDoc = parser.parseFromString(svgContent, 'image/svg+xml');
+              const svgElement = svgDoc.querySelector('svg');
+              
+              if (svgElement) {
+                const viewBox = svgElement.getAttribute('viewBox');
+                const width = svgElement.getAttribute('width');
+                const height = svgElement.getAttribute('height');
+                
+                let svgWidth = 0;
+                let svgHeight = 0;
+                
+                if (viewBox) {
+                  const [, , vw, vh] = viewBox.split(' ').map(Number);
+                  svgWidth = vw;
+                  svgHeight = vh;
+                } else if (width && height) {
+                  svgWidth = parseFloat(width);
+                  svgHeight = parseFloat(height);
+                }
+                
+                const containerWidth = containerRef.current.clientWidth - 80; // padding
+                const containerHeight = containerRef.current.clientHeight - 80;
+                
+                if (svgWidth && svgHeight) {
+                  const scaleX = containerWidth / svgWidth;
+                  const scaleY = containerHeight / svgHeight;
+                  const scale = Math.min(scaleX, scaleY, 1); // Don't scale up, only down
+                  
+                  setInitialScale(scale);
+                  setResetKey(prev => prev + 1);
+                }
+              }
+            }
+          }, 50);
         }
       } catch (err) {
         console.error('Mermaid rendering error:', err);
@@ -91,12 +133,13 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
   }
 
   return (
-    <div className="w-full h-full relative overflow-hidden bg-white rounded-lg">
+    <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-white rounded-lg">
       <TransformWrapper
-        initialScale={1}
-        minScale={0.2}
+        key={resetKey}
+        initialScale={initialScale}
+        minScale={0.1}
         maxScale={5}
-        centerOnInit
+        centerOnInit={true}
         limitToBounds={false}
         wheel={{ step: 0.05 }}
       >
