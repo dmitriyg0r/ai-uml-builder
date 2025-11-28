@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import mermaid from 'mermaid';
 import { LoadingSpinner } from './LoadingSpinner';
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import { useTranslation } from 'react-i18next';
 
 interface MermaidRendererProps {
   code: string;
@@ -22,6 +23,7 @@ const ResetIcon = () => (
 );
 
 const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onError }) => {
+  const { t } = useTranslation();
   const [svg, setSvg] = useState<string>('');
   const [isRendering, setIsRendering] = useState(false);
   const [resetKey, setResetKey] = useState(0);
@@ -100,7 +102,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
         console.error('Mermaid rendering error:', err);
         if (!cancelled) {
           setSvg('');
-          onError?.('Ошибка рендеринга диаграммы. Проверьте синтаксис.');
+          onError?.(t('diagram.renderError'));
         }
       } finally {
         if (!cancelled) {
@@ -113,13 +115,13 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
     return () => {
       cancelled = true;
     };
-  }, [code, onError]);
+  }, [code, onError, t]);
 
   if (isRendering) {
     return (
       <div className="flex flex-col items-center justify-center h-full text-slate-500">
         <LoadingSpinner />
-        <span className="mt-2 text-sm">Отрисовка...</span>
+        <span className="mt-2 text-sm">{t('diagram.rendering')}</span>
       </div>
     );
   }
@@ -127,7 +129,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
   if (!svg) {
      return (
          <div className="flex items-center justify-center h-full text-slate-400 text-sm italic border-2 border-dashed border-slate-200 rounded-lg p-4 text-center m-4">
-             {code ? 'Не удалось построить диаграмму' : 'Диаграмма появится здесь'}
+             {code ? t('diagram.failed') : t('diagram.placeholder')}
          </div>
      )
   }
@@ -149,14 +151,14 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
               <button 
                 onClick={() => zoomIn()} 
                 className="p-2 hover:bg-slate-50 text-slate-600 rounded-md transition-colors"
-                title="Приблизить"
+                title={t('diagram.zoomIn')}
               >
                 <ZoomInIcon />
               </button>
               <button 
                 onClick={() => zoomOut()} 
                 className="p-2 hover:bg-slate-50 text-slate-600 rounded-md transition-colors"
-                title="Отдалить"
+                title={t('diagram.zoomOut')}
               >
                 <ZoomOutIcon />
               </button>
@@ -164,7 +166,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
               <button 
                 onClick={() => resetTransform()} 
                 className="p-2 hover:bg-slate-50 text-slate-600 rounded-md transition-colors flex justify-center items-center"
-                title="Сбросить масштаб"
+                title={t('diagram.resetZoom')}
               >
                 <ResetIcon />
               </button>

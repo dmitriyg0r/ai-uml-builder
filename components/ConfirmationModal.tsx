@@ -1,5 +1,6 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -18,10 +19,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   message,
   onConfirm,
   onCancel,
-  confirmLabel = 'Подтвердить',
-  cancelLabel = 'Отмена',
+  confirmLabel,
+  cancelLabel,
   isDestructive = false,
 }) => {
+  const { t } = useTranslation();
+  const confirmText = confirmLabel || t('common.confirm');
+  const cancelText = cancelLabel || t('common.cancel');
+
   if (!isOpen) return null;
 
   return createPortal(
@@ -36,7 +41,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             onClick={onCancel}
             className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
           >
-            {cancelLabel}
+            {cancelText}
           </button>
           <button
             onClick={onConfirm}
@@ -46,7 +51,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 : 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
             }`}
           >
-            {confirmLabel}
+            {confirmText}
           </button>
         </div>
       </div>

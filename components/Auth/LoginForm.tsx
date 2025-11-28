@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 
 interface LoginFormProps {
@@ -7,6 +8,7 @@ interface LoginFormProps {
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegister }) => {
+  const { t } = useTranslation();
   const { signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -22,7 +24,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
       const { error } = await signIn(email, password);
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          setError('Неверный email или пароль');
+          setError(t('auth.loginError'));
         } else {
           setError(error.message);
         }
@@ -30,7 +32,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
         onSuccess();
       }
     } catch (err) {
-      setError('Произошла ошибка при входе');
+      setError(t('auth.loginUnknownError'));
     } finally {
       setLoading(false);
     }
@@ -40,7 +42,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-          Email
+          {t('auth.email')}
         </label>
         <input
           id="email"
@@ -55,7 +57,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
 
       <div>
         <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">
-          Пароль
+          {t('auth.password')}
         </label>
         <input
           id="password"
@@ -79,7 +81,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
         disabled={loading || !email || !password}
         className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
       >
-        {loading ? 'Вход...' : 'Войти'}
+        {loading ? t('auth.loginLoading') : t('auth.loginButton')}
       </button>
 
       <div className="text-center pt-2">
@@ -88,7 +90,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
           onClick={onSwitchToRegister}
           className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
         >
-          Нет аккаунта? Зарегистрироваться
+          {t('auth.noAccount')}
         </button>
       </div>
     </form>

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { useAuth } from './useAuth';
 import { Chat, ChatMessage } from '../types';
+import { useRef } from 'react';
 
 interface LocalChat {
   id: string;
@@ -64,7 +65,7 @@ const loadGuestState = (): { chats: Chat[]; activeChatId: string | null } => {
 
   const fallbackChat: LocalChat = {
     id: createGuestId(),
-    name: 'Новый чат',
+    name: 'New chat',
     messages: [],
     code: '',
     createdAt: Date.now(),
@@ -101,7 +102,7 @@ const migrateLocalStorageData = async (userId: string): Promise<void> => {
       const messages = oldMessages ? JSON.parse(oldMessages) : [];
       chatsToMigrate.push({
         id: crypto.randomUUID(),
-        name: 'Новый чат',
+        name: 'New chat',
         messages,
         code,
         createdAt: Date.now(),
@@ -141,11 +142,18 @@ export const useChats = () => {
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const loadedForUserRef = useRef<string | null>(null);
 
   const activeChat = chats.find((chat) => chat.id === activeChatId) || chats[0];
 
   // Загрузка чатов при монтировании
   useEffect(() => {
+    const currentUserKey = user ? user.id : 'guest';
+    if (loadedForUserRef.current === currentUserKey) {
+      return;
+    }
+    loadedForUserRef.current = currentUserKey;
+
     if (!user) {
       setLoading(true);
       const { chats: guestChats, activeChatId: guestActiveId } = loadGuestState();
@@ -180,7 +188,7 @@ export const useChats = () => {
             .from('chats')
             .insert({
               user_id: user.id,
-              name: 'Новый чат',
+              name: 'New chat',
               messages: [],
               code: '',
             })
@@ -215,7 +223,7 @@ export const useChats = () => {
 
         const newChat: LocalChat = {
           id: createGuestId(),
-          name: customName || 'Новый чат',
+          name: customName || 'New chat',
           messages: [],
           code: '',
           createdAt: Date.now(),
@@ -234,7 +242,7 @@ export const useChats = () => {
           .from('chats')
           .insert({
             user_id: user.id,
-            name: customName || 'Новый чат',
+            name: customName || 'New chat',
             messages: [],
             code: '',
           })
@@ -285,7 +293,7 @@ export const useChats = () => {
       // В гостевом режиме просто сбрасываем чат
       const freshChat: LocalChat = {
         id: createGuestId(),
-        name: 'Новый чат',
+        name: 'New chat',
         messages: [],
         code: '',
         createdAt: Date.now(),

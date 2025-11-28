@@ -1,5 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
+import { useTranslation } from 'react-i18next';
 import { generateMermaidCode, generateChatTitle } from './services/aisetService';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ConfirmationModal } from './components/ConfirmationModal';
@@ -93,6 +94,13 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
+const SettingsIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5c0-.414.336-.75.75-.75a7.5 7.5 0 0 1 7.5 7.5c0 .414-.336.75-.75.75h-.676a1.5 1.5 0 0 0-1.454 1.106l-.18.65a1.5 1.5 0 0 0 .327 1.376l.478.525a.75.75 0 0 1-.038 1.057l-1.286 1.143a.75.75 0 0 1-1.06-.02l-.48-.514a1.5 1.5 0 0 0-1.364-.422l-.662.15a1.5 1.5 0 0 0-1.124 1.27l-.078.67a.75.75 0 0 1-.744.664H9.75a7.5 7.5 0 0 1-7.5-7.5c0-.414.336-.75.75-.75h.676a1.5 1.5 0 0 0 1.454-1.106l.18-.65a1.5 1.5 0 0 0-.327-1.376l-.478-.525a.75.75 0 0 1 .038-1.057l1.286-1.143a.75.75 0 0 1 1.06.02l.48.514a1.5 1.5 0 0 0 1.364.422l.662-.15a1.5 1.5 0 0 0 1.124-1.27l.078-.67a.75.75 0 0 1 .744-.664H12" />
+    <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 12a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+  </svg>
+);
+
 
 type SidebarTab = 'chat' | 'code';
 
@@ -102,6 +110,7 @@ const createId = () =>
     : Date.now().toString(36);
 
 const App: React.FC = () => {
+  const { t, i18n } = useTranslation();
   const {
     chats,
     activeChat,
@@ -125,6 +134,7 @@ const App: React.FC = () => {
   const [isChatsDropdownOpen, setIsChatsDropdownOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const guestRequestLimit = 3;
   const [guestRequestCount, setGuestRequestCount] = useState(() => {
     const stored = localStorage.getItem('guest:ai-requests');
@@ -164,6 +174,13 @@ const App: React.FC = () => {
   const isGuestLimitReached = !user && guestRequestCount >= guestRequestLimit;
   const isGuest = !user;
   const inputDisabled = isGuestLimitReached;
+  const languages = React.useMemo(
+    () => [
+      { code: 'en', label: t('languages.en') },
+      { code: 'ru', label: t('languages.ru') },
+    ],
+    [t]
+  );
 
   const hasDiagram = Boolean(renderedCode.trim());
   const hasHistory = messages.length > 0;
@@ -222,6 +239,12 @@ const App: React.FC = () => {
     return () => document.removeEventListener('pointerdown', handleClickOutside);
   }, [isProfileMenuOpen]);
 
+  useEffect(() => {
+    if (!isProfileMenuOpen) {
+      setIsSettingsOpen(false);
+    }
+  }, [isProfileMenuOpen]);
+
   // Синхронизация лимита запросов для гостя
   useEffect(() => {
     if (user) {
@@ -244,7 +267,7 @@ const App: React.FC = () => {
     if (!trimmed || isLoading || !activeChat) return;
 
     if (!user && guestRequestCount >= guestRequestLimit) {
-      setError('В гостевом режиме доступно 3 ИИ-запроса. Войдите или зарегистрируйтесь, чтобы продолжить.');
+      setError(t('chat.guestLimit'));
       setIsAuthModalOpen(true);
       return;
     }
@@ -277,12 +300,12 @@ const App: React.FC = () => {
       const aiMessage: ChatMessage = {
         id: createId(),
         role: 'ai',
-        text: isUpdate ? 'Диаграмма обновлена.' : 'Диаграмма создана.',
+        text: isUpdate ? t('chat.aiUpdate') : t('chat.aiCreate'),
       };
       updateChatMessages(activeChat.id, [...newMessages, aiMessage]);
 
       // Генерируем название чата только для первого сообщения
-      if (messages.length === 0 && activeChat.name === 'Новый чат') {
+      if (messages.length === 0 && activeChat.name === t('sidebar.newChat')) {
         generateChatTitle(trimmed, controller.signal)
           .then((title) => {
             renameChat(activeChat.id, title);
@@ -296,14 +319,14 @@ const App: React.FC = () => {
         console.log('Generation aborted');
         return;
       }
-      const message = err instanceof Error ? err.message : 'Не удалось сгенерировать диаграмму.';
+      const message = err instanceof Error ? err.message : t('chat.generateError');
       console.error(err);
       setError(message);
 
       const errorMessage: ChatMessage = {
         id: createId(),
         role: 'ai',
-        text: 'Извините, произошла ошибка при генерации.',
+        text: t('chat.errorMessage'),
       };
       updateChatMessages(activeChat.id, [...newMessages, errorMessage]);
     } finally {
@@ -318,7 +341,7 @@ const App: React.FC = () => {
         setTimeout(() => setIsAuthModalOpen(true), 150);
       }
     }
-  }, [prompt, isLoading, renderedCode, currentCode, messages, activeChat, updateChatMessages, updateChatCode, flush, user, renameChat, guestRequestCount, guestRequestLimit]);
+  }, [prompt, isLoading, renderedCode, currentCode, messages, activeChat, updateChatMessages, updateChatCode, flush, user, renameChat, guestRequestCount, guestRequestLimit, t]);
 
   const handleStop = useCallback(() => {
     if (abortControllerRef.current) {
@@ -360,9 +383,9 @@ const App: React.FC = () => {
       setTimeout(() => setCopyState('idle'), 1500);
     } catch (err) {
       console.error(err);
-      setError('Не удалось скопировать код.');
+      setError(t('chat.copyError'));
     }
-  }, [renderedCode, currentCode]);
+  }, [renderedCode, currentCode, t]);
 
   const confirmReset = useCallback(() => {
     clearCurrentChat();
@@ -397,25 +420,33 @@ const App: React.FC = () => {
     }
   }, [chatToDelete, deleteChat]);
 
+  const handleLanguageChange = useCallback(
+    (lng: string) => {
+      if (i18n.language === lng) return;
+      i18n.changeLanguage(lng);
+    },
+    [i18n]
+  );
+
   return (
     <div className="flex h-screen w-full bg-slate-100 text-slate-900 relative overflow-hidden">
       <ConfirmationModal
         isOpen={isResetModalOpen}
-        title="Сбросить всё?"
-        message="Это действие удалит текущую диаграмму и историю чата. Отменить это действие нельзя."
+        title={t('modal.resetTitle')}
+        message={t('modal.resetMessage')}
         onConfirm={confirmReset}
         onCancel={() => setIsResetModalOpen(false)}
-        confirmLabel="Сбросить"
+        confirmLabel={t('modal.resetConfirm')}
         isDestructive
       />
 
       <ConfirmationModal
         isOpen={chatToDelete !== null}
-        title="Удалить чат?"
-        message="Это действие удалит чат и всю его историю. Отменить это действие нельзя."
+        title={t('modal.deleteChatTitle')}
+        message={t('modal.deleteChatMessage')}
         onConfirm={confirmDeleteChat}
         onCancel={() => setChatToDelete(null)}
-        confirmLabel="Удалить"
+        confirmLabel={t('modal.deleteChatConfirm')}
         isDestructive
       />
 
@@ -429,7 +460,7 @@ const App: React.FC = () => {
           <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
             <div className="flex flex-col items-center gap-3">
               <LoadingSpinner />
-              <span className="text-sm text-slate-600">Загрузка чатов...</span>
+              <span className="text-sm text-slate-600">{t('sidebar.loadingChats')}</span>
             </div>
           </div>
         )}
@@ -449,7 +480,7 @@ const App: React.FC = () => {
             <button
               onClick={() => setIsSidebarOpen(false)}
               className="inline-flex items-center justify-center w-9 h-9 rounded-lg text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 transition-colors bg-white shadow-sm"
-              title="Скрыть панель"
+              title={t('sidebar.hidePanel')}
             >
               <CollapseIcon />
             </button>
@@ -463,7 +494,7 @@ const App: React.FC = () => {
             >
               <div className="flex items-center gap-2 text-slate-700 truncate">
                 <ChatIcon />
-                <span className="truncate">{activeChat?.name || 'Выберите чат'}</span>
+                <span className="truncate">{activeChat?.name || t('sidebar.selectChat')}</span>
               </div>
               <ChevronDownIcon />
             </button>
@@ -480,11 +511,11 @@ const App: React.FC = () => {
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <PlusIcon />
-                      <span>Новый чат</span>
+                      <span>{t('sidebar.newChat')}</span>
                     </button>
                   ) : (
                     <div className="w-full px-3 py-2 text-xs text-slate-500 bg-slate-50 border border-dashed border-slate-200 rounded-lg">
-                      В гостевом режиме доступен один чат. Войдите, чтобы создавать несколько диаграмм.
+                      {t('sidebar.guestRestriction')}
                     </div>
                   )}
                 </div>
@@ -505,7 +536,7 @@ const App: React.FC = () => {
                       >
                         <div className="font-medium text-slate-700 truncate">{chat.name}</div>
                         <div className="text-xs text-slate-400">
-                          {new Date(chat.updated_at).toLocaleDateString('ru-RU', {
+                          {new Date(chat.updated_at).toLocaleDateString('en-US', {
                             day: 'numeric',
                             month: 'short',
                             hour: '2-digit',
@@ -521,7 +552,7 @@ const App: React.FC = () => {
                             setIsChatsDropdownOpen(false);
                           }}
                           className="ml-2 p-1 text-slate-400 hover:text-red-600 transition-colors"
-                          title="Удалить чат"
+                          title={t('sidebar.deleteChat')}
                         >
                           <TrashIcon />
                         </button>
@@ -545,7 +576,7 @@ const App: React.FC = () => {
             >
               <span className="inline-flex items-center justify-center gap-2">
                 <SparklesIcon />
-                <span>Чат</span>
+                <span>{t('sidebar.tabChat')}</span>
               </span>
             </button>
             <button
@@ -558,7 +589,7 @@ const App: React.FC = () => {
             >
               <span className="inline-flex items-center justify-center gap-2">
                 <CodeIcon />
-                <span>Код</span>
+                <span>{t('sidebar.tabCode')}</span>
               </span>
             </button>
           </div>
@@ -579,20 +610,20 @@ const App: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5c-4.97 0-9 3.134-9 7 0 2.092 1.178 3.954 3.054 5.196.399.268.664.712.664 1.2v1.479c0 .856.92 1.4 1.666.97l1.89-1.09a2.25 2.25 0 011.125-.3h1.395c4.97 0 9-3.134 9-7s-4.03-7-9-7z" />
                       </svg>
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-2">Гостевой режим</h3>
+                    <h3 className="text-lg font-semibold text-slate-700 mb-2">{t('sidebar.guestTitle')}</h3>
                     <p className="text-slate-500 mb-3">
-                      Доступно {guestRequestsLeft} из {guestRequestLimit} ИИ-запросов без регистрации.
+                      {t('sidebar.guestUsage', { remaining: guestRequestsLeft, limit: guestRequestLimit })}
                     </p>
-                    <p className="text-slate-500 mb-4">После входа текущая диаграмма сохранится в вашем аккаунте.</p>
+                    <p className="text-slate-500 mb-4">{t('sidebar.guestSaved')}</p>
                     <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
                       <button
                         onClick={() => setIsAuthModalOpen(true)}
                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
                       >
                         <UserIcon />
-                        <span>Войти или зарегистрироваться</span>
+                        <span>{t('sidebar.guestCta')}</span>
                       </button>
-                      <span className="text-xs text-slate-400">или попробуйте бесплатно</span>
+                      <span className="text-xs text-slate-400">{t('sidebar.guestHint')}</span>
                     </div>
                   </div>
                 )}
@@ -601,8 +632,8 @@ const App: React.FC = () => {
                     <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
                       <SparklesIcon />
                     </div>
-                    <p>Опишите задачу для генерации диаграммы.</p>
-                    <p className="mt-2 text-xs">Например: "Схема регистрации пользователя"</p>
+                    <p>{t('sidebar.emptyPrompt')}</p>
+                    <p className="mt-2 text-xs">{t('sidebar.emptyHint')}</p>
                   </div>
                 )}
                 
@@ -652,11 +683,11 @@ const App: React.FC = () => {
                     placeholder={
                       isGuest
                         ? isGuestLimitReached
-                          ? 'Лимит запросов исчерпан. Войдите, чтобы продолжить.'
-                          : `Опишите диаграмму... (осталось ${guestRequestsLeft} из ${guestRequestLimit})`
+                          ? t('input.limitReached')
+                          : t('input.guestPlaceholder', { remaining: guestRequestsLeft, limit: guestRequestLimit })
                         : currentCode
-                          ? 'Попросите улучшить диаграмму или добавить детали...'
-                          : 'Опишите диаграмму...'
+                          ? t('input.improvePlaceholder')
+                          : t('input.defaultPlaceholder')
                     }
                     value={prompt}
                     onChange={(e) => setPrompt(e.target.value)}
@@ -666,8 +697,8 @@ const App: React.FC = () => {
                     <button
                       onClick={handleStop}
                       className="absolute bottom-3 right-3 p-2 rounded-lg text-white bg-red-500 hover:bg-red-600 shadow-sm transition-all transform active:scale-90"
-                      title="Остановить генерацию"
-                      aria-label="Остановить генерацию"
+                      title={t('input.stopTitle')}
+                      aria-label={t('input.stopTitle')}
                     >
                       <StopIcon />
                     </button>
@@ -682,8 +713,8 @@ const App: React.FC = () => {
                           : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
                         }
                       `}
-                      title={isGuestLimitReached ? 'Лимит гостевых запросов. Войдите, чтобы продолжить.' : 'Отправить (Ctrl + Enter)'}
-                      aria-label="Отправить сообщение"
+                      title={isGuestLimitReached ? t('chat.guestLimitReached') : t('input.sendTitle')}
+                      aria-label={t('input.send')}
                     >
                       <SendIcon />
                     </button>
@@ -691,12 +722,12 @@ const App: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between text-xs text-slate-400">
                   <span>
-                    <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> для отправки
+                    <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> {t('input.sendShortcut')}
                   </span>
                   {isLoading && (
                     <span className="flex items-center gap-1 text-blue-500">
                       <RefreshIcon />
-                      <span>Ждём ответ...</span>
+                      <span>{t('input.waiting')}</span>
                     </span>
                   )}
                 </div>
@@ -731,21 +762,21 @@ const App: React.FC = () => {
               <button
                 onClick={() => setIsSidebarOpen(true)}
                 className="px-3 py-2 text-sm font-medium text-slate-600 bg-white border border-slate-200 rounded-lg shadow-sm hover:border-blue-300 hover:text-blue-600 transition-colors"
-                title="Показать панель"
+                title={t('toolbar.showPanel')}
               >
-                Открыть панель
+                {t('toolbar.openPanel')}
               </button>
             )}
-            <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">Холст</span>
+            <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('toolbar.canvas')}</span>
             {isDebouncing && (
                  <div className="flex items-center gap-2 text-xs text-blue-500 animate-pulse">
                      <RefreshIcon />
-                     <span>Синхронизация...</span>
+                     <span>{t('toolbar.syncing')}</span>
                  </div>
             )}
             {!isDebouncing && hasDiagram && (
               <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
-                Автообновление
+                {t('toolbar.autoUpdate')}
               </div>
             )}
           </div>
@@ -755,11 +786,11 @@ const App: React.FC = () => {
               onClick={handleCopyCode}
               disabled={!hasDiagram}
               className="px-3 py-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-              title="Скопировать Mermaid код"
+              title={t('toolbar.copyTitle')}
             >
               <CopyIcon />
               <span className="text-sm font-medium">
-                {copyState === 'copied' ? 'Скопировано' : 'Скопировать'}
+                {copyState === 'copied' ? t('toolbar.copied') : t('toolbar.copy')}
               </span>
             </button>
 
@@ -769,10 +800,10 @@ const App: React.FC = () => {
                 onClick={toggleExportMenu}
                 disabled={!hasDiagram}
                 className="px-3 py-2 text-slate-600 hover:text-blue-600 bg-white border border-slate-200 rounded-lg hover:border-blue-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-                title="Экспорт диаграммы"
+                title={t('toolbar.exportTitle')}
               >
                 <DownloadIcon />
-                <span className="text-sm font-medium">Экспорт</span>
+                <span className="text-sm font-medium">{t('toolbar.export')}</span>
               </button>
 
               {showExportMenu &&
@@ -792,14 +823,14 @@ const App: React.FC = () => {
                         className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
                     >
                         <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">SVG</div>
-                        <span>Векторный</span>
+                        <span>{t('toolbar.exportVector')}</span>
                     </button>
                     <button 
                         onClick={() => exportDiagram('png')} 
                         className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
                     >
                         <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">PNG</div>
-                        <span>Изображение</span>
+                        <span>{t('toolbar.exportImage')}</span>
                     </button>
                   </div>,
                   document.body
@@ -811,11 +842,11 @@ const App: React.FC = () => {
               onClick={handleResetClick}
               disabled={!canReset}
               className="px-3 py-2 text-slate-600 hover:text-red-600 bg-white border border-slate-200 rounded-lg hover:border-red-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
-              title="Сбросить диаграмму и историю"
-              aria-label="Сбросить диаграмму и историю"
+              title={t('toolbar.resetTitle')}
+              aria-label={t('toolbar.resetTitle')}
             >
               <TrashIcon />
-              <span className="text-sm font-medium">Сброс</span>
+              <span className="text-sm font-medium">{t('toolbar.reset')}</span>
             </button>
 
             {/* Profile Button */}
@@ -825,7 +856,7 @@ const App: React.FC = () => {
                   ref={profileButtonRef}
                   onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
                   className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-600 hover:border-blue-300 hover:text-blue-600 transition-colors flex items-center gap-2 shadow-sm"
-                  title="Профиль"
+                  title={t('toolbar.profile')}
                 >
                   <div className="w-6 h-6 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
                     <UserIcon />
@@ -836,10 +867,10 @@ const App: React.FC = () => {
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
                   className="px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2 shadow-sm"
-                  title="Войти в аккаунт"
+                  title={t('toolbar.signIn')}
                 >
                   <UserIcon />
-                  <span className="text-sm font-medium">Войти</span>
+                  <span className="text-sm font-medium">{t('toolbar.signIn')}</span>
                 </button>
               )}
 
@@ -869,6 +900,41 @@ const App: React.FC = () => {
                   {/* Menu Items */}
                   <div className="py-1">
                     <button
+                      onClick={() => setIsSettingsOpen((prev) => !prev)}
+                      className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <SettingsIcon />
+                      <span className="flex-1">{t('toolbar.settings')}</span>
+                    </button>
+                    {isSettingsOpen && (
+                      <div className="px-4 pb-3 space-y-2">
+                        <div className="text-xs text-slate-400">{t('settings.language')}</div>
+                        <div className="flex flex-wrap gap-2">
+                          {languages.map((lang) => {
+                            const isActive = i18n.language.startsWith(lang.code);
+                            return (
+                              <button
+                                key={lang.code}
+                                onClick={() => handleLanguageChange(lang.code)}
+                                className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
+                                  isActive
+                                    ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                    : 'bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-700'
+                                }`}
+                                aria-pressed={isActive}
+                              >
+                                {lang.label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        <div className="text-[11px] text-slate-400">{t('settings.languageHint')}</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="py-1 border-t border-slate-100">
+                    <button
                       onClick={() => {
                         signOut();
                         setIsProfileMenuOpen(false);
@@ -878,7 +944,7 @@ const App: React.FC = () => {
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                         <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
                       </svg>
-                      <span>Выйти из аккаунта</span>
+                      <span>{t('toolbar.signOut')}</span>
                     </button>
                   </div>
                 </div>,

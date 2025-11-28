@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-markdown';
+import { useTranslation } from 'react-i18next';
 
 // Define Mermaid syntax highlighting for Prism
 if (typeof window !== 'undefined' && !Prism.languages.mermaid) {
@@ -48,6 +49,7 @@ const AlertIcon = () => (
 );
 
 export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({ value, onChange, onRun }) => {
+  const { t } = useTranslation();
   const [localValue, setLocalValue] = useState(value);
   const [validationStatus, setValidationStatus] = useState<'valid' | 'invalid' | null>(null);
   const [hasChanges, setHasChanges] = useState(false);
@@ -177,17 +179,17 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({ value, onChan
                 : 'bg-amber-500/20 text-amber-600'
             }`}>
               {validationStatus === 'valid' ? <CheckIcon /> : <AlertIcon />}
-              <span>{validationStatus === 'valid' ? 'Valid' : 'Check syntax'}</span>
+              <span>{validationStatus === 'valid' ? t('editor.validationValid') : t('editor.validationCheck')}</span>
             </div>
           )}
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[9px] opacity-40">{lineCount} строк</span>
+          <span className="text-[9px] opacity-40">{t('editor.lines', { count: lineCount })}</span>
           
           {/* Unsaved indicator */}
           {hasChanges && (
-            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" title="Есть несохранённые изменения"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" title={t('editor.unsavedTitle')}></div>
           )}
           
           {/* Format button */}
@@ -195,10 +197,10 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({ value, onChan
             onClick={handleFormat}
             disabled={!localValue.trim()}
             className="flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-slate-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-            title="Форматировать код"
+            title={t('editor.formatTitle')}
           >
             <FormatIcon />
-            <span className="text-[9px]">Формат</span>
+            <span className="text-[9px]">{t('editor.format')}</span>
           </button>
           
           {/* Run button */}
@@ -206,7 +208,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({ value, onChan
             onClick={handleRun}
             disabled={!hasChanges}
             className="flex items-center justify-center w-6 h-6 rounded bg-emerald-600 text-white hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-            title={hasChanges ? 'Запустить (применить изменения)' : 'Нет изменений'}
+            title={hasChanges ? t('editor.runTitle') : t('editor.runTitleNoChanges')}
           >
             <PlayIcon />
           </button>
@@ -245,7 +247,7 @@ export const CodeEditor: React.FC<CodeEditorProps> = React.memo(({ value, onChan
             >
               <pre
                 className="m-0 p-0 text-slate-800"
-                dangerouslySetInnerHTML={{ __html: highlightedCode || '<span style="color: #94a3b8;">// Введите Mermaid код здесь...\n// Например:\ngraph TD\n    A[Start] --> B[Process]\n    B --> C[End]</span>' }}
+                dangerouslySetInnerHTML={{ __html: highlightedCode || `<span style="color: #94a3b8;">${t('editor.placeholder')}</span>` }}
               />
             </div>
             

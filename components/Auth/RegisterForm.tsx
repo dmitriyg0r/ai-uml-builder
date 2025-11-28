@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../hooks/useAuth';
 
 interface RegisterFormProps {
@@ -7,6 +8,7 @@ interface RegisterFormProps {
 }
 
 export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchToLogin }) => {
+  const { t } = useTranslation();
   const { signUp } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -19,14 +21,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
     e.preventDefault();
     setError(null);
 
-    // Валидация паролей
     if (password !== confirmPassword) {
-      setError('Пароли не совпадают');
+      setError(t('auth.registerErrorMismatch'));
       return;
     }
 
     if (password.length < 6) {
-      setError('Пароль должен быть не менее 6 символов');
+      setError(t('auth.registerErrorLength'));
       return;
     }
 
@@ -36,7 +37,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
       const { error } = await signUp(email, password);
       if (error) {
         if (error.message.includes('already registered')) {
-          setError('Этот email уже зарегистрирован');
+          setError(t('auth.registerErrorExists'));
         } else {
           setError(error.message);
         }
@@ -48,7 +49,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
         }, 2000);
       }
     } catch (err) {
-      setError('Произошла ошибка при регистрации');
+      setError(t('auth.registerUnknownError'));
     } finally {
       setLoading(false);
     }
@@ -63,12 +64,12 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           </svg>
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-slate-800 mb-2">Регистрация успешна!</h3>
+          <h3 className="text-lg font-semibold text-slate-800 mb-2">{t('auth.registerSuccessTitle')}</h3>
           <p className="text-sm text-slate-600">
-            Проверьте вашу почту для подтверждения аккаунта.
+            {t('auth.registerSuccessMessage')}
           </p>
           <p className="text-xs text-slate-400 mt-2">
-            После подтверждения вы сможете войти в систему.
+            {t('auth.registerSuccessNote')}
           </p>
         </div>
       </div>
@@ -79,7 +80,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <label htmlFor="register-email" className="block text-sm font-medium text-slate-700 mb-1">
-          Email
+          {t('auth.email')}
         </label>
         <input
           id="register-email"
@@ -94,7 +95,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
 
       <div>
         <label htmlFor="register-password" className="block text-sm font-medium text-slate-700 mb-1">
-          Пароль
+          {t('auth.password')}
         </label>
         <input
           id="register-password"
@@ -103,13 +104,13 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           onChange={(e) => setPassword(e.target.value)}
           required
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-          placeholder="Минимум 6 символов"
+          placeholder={t('auth.passwordPlaceholder')}
         />
       </div>
 
       <div>
         <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-700 mb-1">
-          Подтверждение пароля
+          {t('auth.confirmPassword')}
         </label>
         <input
           id="confirm-password"
@@ -118,7 +119,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none text-sm"
-          placeholder="Повторите пароль"
+          placeholder={t('auth.confirmPasswordPlaceholder')}
         />
       </div>
 
@@ -133,7 +134,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
         disabled={loading || !email || !password || !confirmPassword}
         className="w-full py-2.5 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
       >
-        {loading ? 'Регистрация...' : 'Зарегистрироваться'}
+        {loading ? t('auth.registerLoading') : t('auth.registerButton')}
       </button>
 
       <div className="text-center pt-2">
@@ -142,7 +143,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
           onClick={onSwitchToLogin}
           className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
         >
-          Уже есть аккаунт? Войти
+          {t('auth.haveAccount')}
         </button>
       </div>
     </form>

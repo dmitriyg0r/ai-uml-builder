@@ -62,11 +62,13 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.84.0",
+    "i18next": "^25.6.3",
     "mermaid": "^11.12.1",
     "openai": "^4.76.3",
     "prismjs": "1.29.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
+    "react-i18next": "^16.3.5",
     "react-simple-code-editor": "0.14.1",
     "react-zoom-pan-pinch": "3.4.4"
   },

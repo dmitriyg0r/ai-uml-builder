@@ -1,18 +1,20 @@
 
 import { useCallback, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface UseDiagramExportProps {
   setError: (error: string | null) => void;
 }
 
 export const useDiagramExport = ({ setError }: UseDiagramExportProps) => {
+  const { t } = useTranslation();
   const [isExporting, setIsExporting] = useState(false);
 
   const exportDiagram = useCallback(
     (format: 'svg' | 'png') => {
       const svgElement = document.querySelector<SVGSVGElement>('#mermaid-svg-root svg');
       if (!svgElement) {
-        setError('Диаграмма не найдена. Сначала сгенерируйте её.');
+        setError(t('export.notFound'));
         return;
       }
 
@@ -72,7 +74,7 @@ export const useDiagramExport = ({ setError }: UseDiagramExportProps) => {
           const ctx = canvas.getContext('2d');
           
           if (!ctx) {
-            setError('Браузер не поддерживает экспорт в PNG.');
+            setError(t('export.pngUnsupported'));
             setIsExporting(false);
             return;
           }
@@ -86,7 +88,7 @@ export const useDiagramExport = ({ setError }: UseDiagramExportProps) => {
 
           canvas.toBlob((blob) => {
             if (!blob) {
-              setError('Ошибка при экспорте в PNG.');
+              setError(t('export.pngError'));
               setIsExporting(false);
               return;
             }
@@ -105,18 +107,18 @@ export const useDiagramExport = ({ setError }: UseDiagramExportProps) => {
 
         img.onerror = (e) => {
           console.error('Image loading error', e);
-          setError('Ошибка при экспорте в PNG. Возможно, диаграмма содержит внешние ресурсы.');
+          setError(t('export.pngExternal'));
           setIsExporting(false);
         };
 
         img.src = imageSrc;
       } catch (error) {
         console.error(error);
-        setError('Произошла непредвиденная ошибка при экспорте.');
+        setError(t('export.unexpected'));
         setIsExporting(false);
       }
     },
-    [setError]
+    [setError, t]
   );
 
   return { exportDiagram, isExporting };
