@@ -46,9 +46,12 @@
       "icon": "icon.ico"
     },
     "linux": {
-      "target": [
-        "AppImage"
-      ],
+      "target": {
+        "target": "AppImage",
+        "arch": [
+          "x64"
+        ]
+      },
       "category": "Development",
       "icon": "icon-512.png"
     },
