@@ -9,7 +9,7 @@
     "build": "vite build && electron-builder",
     "build:win": "vite build && electron-builder --win",
     "build:mac": "vite build && electron-builder --mac",
-    "build:linux": "vite build && electron-builder --linux",
+    "build:linux": "vite build && electron-builder --linux --x64",
     "build:all": "vite build && electron-builder -mwl",
     "preview": "vite preview"
   },
@@ -28,8 +28,7 @@
       "target": {
         "target": "dir",
         "arch": [
-          "arm64",
-          "x64"
+          "arm64"
         ]
       },
       "category": "public.app-category.developer-tools",
