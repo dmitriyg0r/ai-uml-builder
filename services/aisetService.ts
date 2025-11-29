@@ -1,3 +1,5 @@
+import { buildDiagramGuidance } from './diagramPromptLibrary';
+
 const SYSTEM_INSTRUCTION = `
 You are an expert software architect and UML diagram generator. 
 Your task is to convert user descriptions into valid Mermaid.js syntax OR update existing Mermaid.js code based on user feedback.
@@ -10,8 +12,8 @@ Rules:
 2. Do NOT include markdown code blocks (like \`\`\`mermaid).
 3. Do NOT include explanations or preamble.
 4. Ensure the syntax is valid and correct for the latest version of Mermaid.
-5. If the user asks for a specific type of diagram (Sequence, Class, ER, etc.), respect it.
-6. If the user is vague, infer the best diagram type (usually Flowchart or Sequence).
+5. If the user asks for a specific type of diagram (Sequence, Class, ER, etc.), respect it and start with the correct Mermaid keyword (sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, flowchart/graph for use-case/activity).
+6. If the user is vague, infer the best diagram type (usually Flowchart or Sequence) and state it in the diagram header.
 
 7. **LANGUAGE & TERMINOLOGY (GOST R 52573-2006)**: 
    - Detect the language of the user's prompt. 
@@ -82,6 +84,15 @@ Rules:
    - Ensure high contrast and readability
    - Use appropriate Mermaid diagram types that best match UML semantics
 
+11. **SYNTAX SAFETY CHECKS**:
+    - Validate the Mermaid syntax before replying: correct diagram keyword, arrow types, labels on edges use |Label| (no trailing colons), actor/participant declarations where required.
+    - For Use Case diagrams in flowchart: actors as nodes with <<actor>>, use ((Use Case)) for use cases, include/extend as UC1 ..|<<include>>|> UC2 (no colons), group system in subgraph.
+    - Do NOT use Mermaid "class" declarations to assign stereotypes like <<actor>> in flowchart diagrams; if styling actors, define nodes with <<actor>> text and apply classDef/class only for visual styles.
+    - Avoid stray identifiers before edges (no "A1 --|Label|> UC1"). Format edges strictly as <ActorNode> --|Label|> <UseCase> and UCx ..|<<include/extend>>|> UCy.
+    - Do NOT place stereotypes after node declarations in flowchart (e.g., no Клиент["Клиент"] <<actor>>). If you need a stereotype, include it inside the node label like "<<actor>> Клиент" and/or style via classDef.
+    - One statement per line: do not combine multiple edges/declarations on a single line; keep spaces around arrows to avoid token glue (no "UC1-->" or "Поиск_тураКлиент").
+    - Never return partial/ambiguous code; ensure the final code is ready to render without errors.
+
 **UPDATE MODE**:
 If "EXISTING CODE" is provided:
 1. Analyze the existing code.
@@ -90,9 +101,25 @@ If "EXISTING CODE" is provided:
 4. Return the FULL valid Mermaid code (not just the diff).
 `;
 
+import { buildDiagramGuidance } from './diagramPromptLibrary';
+
 export const generateMermaidCode = async (prompt: string, existingCode?: string, signal?: AbortSignal): Promise<string> => {
   try {
     let finalPrompt = prompt;
+    const guidanceFromLibrary = buildDiagramGuidance(prompt, existingCode);
+    const genericGuidance = `
+GENERAL MERMAID SAFETY:
+- Use the correct diagram keyword (sequenceDiagram, classDiagram, stateDiagram-v2, erDiagram, graph/flowchart for use-case/activity).
+- One statement per line; do not combine multiple edges or declarations.
+- Keep spaces around arrows; do not glue identifiers (no "UC1-->" or "Поиск_тураКлиент").
+- Labels only via |Label| (no trailing colons).
+- For use-case in flowchart: actors as nodes with "<<actor>>" inside node text, use cases as ((Title)), include/extend as UC1 ..|<<include>>|> UC2, no class <<actor>>.
+- Do NOT put stereotypes after node declarations; include them inside the node text if needed.
+- Subgraph name must be a single identifier or a single quoted string; do not mix both (avoid: subgraph Система "Турагентство").
+- Each node/edge must be on its own line; never place a node name immediately after another without a newline.
+`;
+    const diagramWordRegex = /(diagram|диаграм)/i;
+    const diagramGuidance = guidanceFromLibrary || (diagramWordRegex.test(prompt) ? genericGuidance : null);
 
     if (existingCode) {
       finalPrompt = `
@@ -130,9 +157,17 @@ INSTRUCTION: Update the existing code above based on the user request. Return th
       },
       body: JSON.stringify({
         model: 'deepseek/deepseek-chat',
-        temperature: 0.2,
+        temperature: 0,
         messages: [
           { role: 'system', content: SYSTEM_INSTRUCTION },
+          ...(diagramGuidance
+            ? [
+                {
+                  role: 'system',
+                  content: diagramGuidance,
+                },
+              ]
+            : []),
           { role: 'user', content: finalPrompt },
         ],
       }),
@@ -210,7 +245,7 @@ export const generateChatTitle = async (firstMessage: string, signal?: AbortSign
       },
       body: JSON.stringify({
         model: 'deepseek/deepseek-chat',
-        temperature: 0.3,
+        temperature: 0,
         messages: [
           { role: 'system', content: TITLE_GENERATION_INSTRUCTION },
           { role: 'user', content: firstMessage },
