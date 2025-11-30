@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import mermaid from 'mermaid';
 import { generateMermaidCode, generateChatTitle } from './services/aisetService';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ConfirmationModal } from './components/ConfirmationModal';
@@ -109,78 +108,6 @@ const createId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : Date.now().toString(36);
-
-let mermaidInitDone = false;
-
-const ensureMermaidInit = () => {
-  if (mermaidInitDone) return;
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: 'neutral',
-    securityLevel: 'loose',
-    fontFamily: 'Inter, sans-serif',
-    logLevel: 'error',
-  });
-  mermaidInitDone = true;
-};
-
-const validateMermaidCode = async (code: string): Promise<string | null> => {
-  try {
-    ensureMermaidInit();
-    await mermaid.parse(code);
-    return null;
-  } catch (err: any) {
-    if (err && typeof err === 'object' && 'message' in err) {
-      return (err as Error).message;
-    }
-    return 'Mermaid parse error';
-  }
-};
-
-const sanitizeMermaidCode = (code: string): string => {
-  const normalizedCode = code
-    .replace(/<<\s*include\s*>\s*>/gi, '<<include>>')
-    .replace(/<<\s*extend\s*>\s*>/gi, '<<extend>>')
-    .replace(/<<\s*include\s*>/gi, '<<include>>')
-    .replace(/<<\s*extend\s*>/gi, '<<extend>>')
-    .replace(/\|\s*<<\s*include\s*>>\s*\|/gi, '|<<include>>|')
-    .replace(/\|\s*<<\s*extend\s*>>\s*\|/gi, '|<<extend>>|');
-
-  const lines = normalizedCode.split('\n');
-  const sanitized = lines.flatMap((rawLine) => {
-    let line = rawLine;
-
-    // Fix subgraph with duplicate name styles: subgraph ID "Name" -> subgraph Name
-    const subgraphMatch = line.match(/^(\s*subgraph)\s+([^\s"]+)\s+"([^"]+)"\s*$/);
-    if (subgraphMatch) {
-      const [, prefix, , quoted] = subgraphMatch;
-      line = `${prefix} ${quoted}`;
-    }
-
-    if (!line.includes('--') && !line.includes('..')) return [line];
-
-    // Extract all edges on the line (even when glued) and expand each into its own line
-    const edgeRegex = /([^\s]+)\s*(--|\.\.)\s*([^>]*?)\s*>\s*([^\s]+)/g;
-    const edges: string[] = [];
-    let edgeMatch: RegExpExecArray | null;
-    while ((edgeMatch = edgeRegex.exec(line)) !== null) {
-      const [, fromRaw, arrowToken, labelRaw, toRaw] = edgeMatch;
-      const from = fromRaw.trim();
-      const to = toRaw.trim();
-      const label = labelRaw ? labelRaw.trim() : '';
-      const labelSegment = label ? ` ${label}` : '';
-      edges.push(`${from} ${arrowToken}${labelSegment}> ${to}`);
-    }
-
-    if (edges.length > 0) {
-      return edges;
-    }
-
-    return [line];
-  });
-
-  return sanitized.join('\n');
-};
 
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -366,59 +293,9 @@ const App: React.FC = () => {
     abortControllerRef.current = controller;
 
     try {
-      const generateAndValidate = async (userPrompt: string, existing?: string) => {
-        const raw = await generateMermaidCode(userPrompt, existing, controller.signal);
-        const code = sanitizeMermaidCode(raw);
-        const parseError = await validateMermaidCode(code);
-        return { code, parseError };
-      };
-
-      const initialResult = await generateAndValidate(trimmed, renderedCode || currentCode);
-
-      let finalCode = initialResult.code;
-      if (initialResult.parseError) {
-        const sanitized = sanitizeMermaidCode(initialResult.code);
-        const sanitizedError = await validateMermaidCode(sanitized);
-
-        if (!sanitizedError) {
-          finalCode = sanitized;
-        } else {
-          const retryPrompt = `${trimmed}
-
-The previous Mermaid code failed to parse with error:
-${initialResult.parseError}
-Regenerate the FULL Mermaid code from scratch and ensure it passes parsing. Strict rules:
-- Use correct diagram keyword.
-- Labels only via |Label|.
-- No class <<actor>> in flowchart; put <<actor>> inside node text if needed.
-- Do not place stereotypes after node declarations.
-- No stray identifiers before edges (format <ActorNode> --|Label|> <UseCase>).
-- One statement per line; do not put multiple edges on the same line. Keep spaces around arrows; do not glue node names (no "Поиск_тураКлиент" or "UC1-->").
-- Each node/edge must be on its own line; never place a node name immediately after another without a newline.
-- Subgraph name must be a single identifier or a single quoted string; do not mix both (avoid: subgraph Система "Турагентство").
-- Follow this exact shape for use-case (adjust names only, keep line breaks):
-graph TD
-  classDef actor fill:#f9f,stroke:#333,stroke-width:2px;
-  Actor["<<actor>> Пользователь"]
-  class Actor actor
-  subgraph Система
-    UC1((Вариант 1))
-    UC2((Вариант 2))
-  end
-  Actor --|Использование|> UC1
-  Actor ..|<<include>>|> UC2
-Return only valid Mermaid code.`;
-
-          const retryResult = await generateAndValidate(retryPrompt, sanitized);
-          if (retryResult.parseError) {
-            throw new Error(retryResult.parseError);
-          }
-          finalCode = retryResult.code;
-        }
-      }
-
-      updateChatCode(activeChat.id, finalCode);
-      flush(finalCode);
+      const mermaidCode = await generateMermaidCode(trimmed, renderedCode || currentCode, controller.signal);
+      updateChatCode(activeChat.id, mermaidCode);
+      flush(mermaidCode);
 
       const aiMessage: ChatMessage = {
         id: createId(),
@@ -428,8 +305,7 @@ Return only valid Mermaid code.`;
       updateChatMessages(activeChat.id, [...newMessages, aiMessage]);
 
       // Генерируем название чата только для первого сообщения
-      const defaultChatNames = [t('sidebar.newChat'), 'New chat', 'Новый чат'];
-      if (messages.length === 0 && defaultChatNames.includes(activeChat.name)) {
+      if (messages.length === 0 && activeChat.name === t('sidebar.newChat')) {
         generateChatTitle(trimmed, controller.signal)
           .then((title) => {
             renameChat(activeChat.id, title);
