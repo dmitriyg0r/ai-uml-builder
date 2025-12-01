@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
-import { generateMermaidCode, generateChatTitle } from './services/aisetService';
+import { generateMermaidCode, generateChatTitle, fixMermaidCode } from './services/aisetService';
 import { LoadingSpinner } from './components/LoadingSpinner';
 import { ConfirmationModal } from './components/ConfirmationModal';
 import { useDebouncedValue } from './hooks/useDebouncedValue';
@@ -413,6 +413,17 @@ const App: React.FC = () => {
     [activeChat, updateChatCode]
   );
 
+  const handleFixCode = useCallback(async (code: string): Promise<string> => {
+    try {
+      const fixedCode = await fixMermaidCode(code);
+      return fixedCode;
+    } catch (err: any) {
+      const message = err instanceof Error ? err.message : t('chat.generateError');
+      setError(message);
+      throw err;
+    }
+  }, [t]);
+
   const confirmDeleteChat = useCallback(() => {
     if (chatToDelete) {
       deleteChat(chatToDelete);
@@ -745,7 +756,7 @@ const App: React.FC = () => {
             <div className="h-full border-t border-slate-200 flex flex-col min-h-0 min-w-0">
                <div className="flex-1 min-h-0 min-w-0">
                  <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
-                   <Editor value={currentCode} onChange={handleCodeChange} />
+                   <Editor value={currentCode} onChange={handleCodeChange} onFixCode={handleFixCode} />
                  </Suspense>
                </div>
             </div>

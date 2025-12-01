@@ -238,3 +238,88 @@ export const generateChatTitle = async (firstMessage: string, signal?: AbortSign
     return firstMessage.slice(0, 30) + (firstMessage.length > 30 ? '...' : '');
   }
 };
+
+const FIX_CODE_INSTRUCTION = `
+You are an expert Mermaid.js syntax validator and fixer.
+Your task is to analyze the provided Mermaid code and fix any syntax errors, making it valid and renderable.
+
+Rules:
+1. Return ONLY the fixed Mermaid.js code.
+2. Do NOT include markdown code blocks (like \`\`\`mermaid).
+3. Do NOT include explanations or comments.
+4. Fix syntax errors while preserving the original intent and structure.
+5. Ensure all node IDs are valid (no special characters except underscores and hyphens).
+6. Fix arrow syntax (-->, --->, ==>, etc.).
+7. Ensure proper quotes around labels with special characters.
+8. Fix indentation and formatting.
+9. Preserve the original language of labels and text.
+10. If the code is already valid, return it as-is.
+
+Common fixes:
+- Invalid node IDs → Replace with valid alphanumeric IDs
+- Missing quotes → Add quotes around labels with spaces or special chars
+- Wrong arrow syntax → Use correct Mermaid arrow notation
+- Unclosed subgraphs → Add missing 'end' statements
+- Invalid diagram type → Use correct Mermaid diagram type
+`;
+
+export const fixMermaidCode = async (code: string, signal?: AbortSignal): Promise<string> => {
+  try {
+    const apiKey =
+      import.meta.env.VITE_POLZA_API_KEY ||
+      import.meta.env.VITE_API_KEY ||
+      import.meta.env.POLZA_API_KEY ||
+      import.meta.env.API_KEY ||
+      process.env.POLZA_API_KEY ||
+      process.env.API_KEY;
+
+    if (!apiKey) {
+      throw new Error('POLZA_API_KEY is not set.');
+    }
+
+    const response = await fetch('https://api.polza.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'deepseek/deepseek-chat',
+        temperature: 0.1,
+        messages: [
+          { role: 'system', content: FIX_CODE_INSTRUCTION },
+          { role: 'user', content: `Fix this Mermaid code:\n\n${code}` },
+        ],
+      }),
+      signal,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Fix code API error: ${response.status} ${response.statusText} – ${errorText}`);
+    }
+
+    const completion = await response.json();
+    const text = completion?.choices?.[0]?.message?.content || '';
+
+    if (!text.trim()) {
+      throw new Error('No fixed code generated');
+    }
+
+    // Cleanup markdown code blocks
+    let cleanCode = text.trim();
+    const codeBlockMatch = cleanCode.match(/```(?:mermaid)?\s*([\s\S]*?)\s*```/);
+    if (codeBlockMatch) {
+      cleanCode = codeBlockMatch[1];
+    } else {
+      cleanCode = cleanCode.replace(/^```mermaid\s*/, '')
+                           .replace(/^```\s*/, '')
+                           .replace(/\s*```$/, '');
+    }
+
+    return cleanCode.trim();
+  } catch (error) {
+    console.error('Error fixing Mermaid code:', error);
+    throw error;
+  }
+};
