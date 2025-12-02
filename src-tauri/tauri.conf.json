@@ -1,9 +1,9 @@
 {
   "productName": "AI UML Builder",
-  "version": "0.0.7",
+  "version": "0.0.10",
   "identifier": "com.aiumlbuilder.desktop",
   "build": {
-    "beforeDevCommand": "vite",
+    "beforeDevCommand": "vite --port 3000",
     "devUrl": "http://localhost:3000",
     "beforeBuildCommand": "vite build",
     "frontendDist": "../dist"
@@ -15,12 +15,11 @@
         "width": 1200,
         "height": 800,
         "resizable": true,
-        "fullscreen": false,
-        "devtools": true
+        "fullscreen": false
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://esm.sh https://aistudiocdn.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.tailwindcss.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://api.openai.com https://polza.ai https://*.supabase.co wss://*.supabase.co"
+      "csp": null
     },
     "withGlobalTauri": true
   },
