@@ -27,6 +27,14 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: 'dist',
         emptyOutDir: true,
+        target: 'es2015',
+        minify: 'esbuild',
+        sourcemap: false,
+        rollupOptions: {
+          output: {
+            manualChunks: undefined,
+          },
+        },
       },
       clearScreen: false,
       envPrefix: ['VITE_', 'TAURI_'],
