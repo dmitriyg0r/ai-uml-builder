@@ -69,7 +69,7 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 - **Cross-Platform** - Works on Windows, macOS (Apple Silicon), and Linux
 - **Offline Editing** - Edit diagrams without internet (generation requires API)
 - **Native Performance** - Built with Tauri for blazing-fast, lightweight experience
-- **Small Size** - Only ~5-15 MB (vs 130 MB with Electron)
+- **Tiny Size** - Only 4.9 MB DMG (96% smaller than Electron!)
 - **User Authentication** - Save and sync your diagrams with Supabase
 - **Multi-Language Interface** - Full support for English and Russian (auto-detected)
 

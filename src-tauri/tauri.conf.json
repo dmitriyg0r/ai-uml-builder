@@ -1,11 +1,11 @@
 {
   "productName": "AI UML Builder",
-  "version": "0.0.4",
-  "identifier": "com.ai-uml-builder.app",
+  "version": "0.0.5",
+  "identifier": "com.aiumlbuilder.desktop",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "beforeDevCommand": "vite",
     "devUrl": "http://localhost:3000",
-    "beforeBuildCommand": "npm run build",
+    "beforeBuildCommand": "vite build",
     "frontendDist": "../dist"
   },
   "app": {
