@@ -1,6 +1,6 @@
 {
   "productName": "AI UML Builder",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "identifier": "com.aiumlbuilder.desktop",
   "build": {
     "beforeDevCommand": "vite",
