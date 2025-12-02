@@ -3,6 +3,7 @@ import { supabase } from '../services/supabaseClient';
 import { useAuth } from './useAuth';
 import { Chat, ChatMessage } from '../types';
 import { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface LocalChat {
   id: string;
@@ -46,16 +47,32 @@ const persistGuestState = (chats: LocalChat[], activeChatId: string | null) => {
   );
 };
 
-const loadGuestState = (): { chats: Chat[]; activeChatId: string | null } => {
+const loadGuestState = (defaultName: string): { chats: Chat[]; activeChatId: string | null } => {
   const raw = localStorage.getItem(LOCAL_STORAGE_KEY);
 
   if (raw) {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed.chats) && parsed.chats.length > 0) {
+        // Update default chat names to current language
+        const updatedChats = parsed.chats.map((c: LocalChat) => {
+          // Check if this is a default chat name (in any language)
+          const isDefaultName = c.name === 'New chat' || c.name === 'Новый чат';
+          // Only update if it's a default name and has no messages (hasn't been used yet)
+          if (isDefaultName && c.messages.length === 0) {
+            return { ...c, name: defaultName };
+          }
+          return c;
+        });
+        
+        // Persist updated names
+        if (JSON.stringify(updatedChats) !== JSON.stringify(parsed.chats)) {
+          persistGuestState(updatedChats, parsed.activeChatId);
+        }
+        
         return {
-          chats: parsed.chats.map((c: LocalChat) => toChat(c)),
-          activeChatId: parsed.activeChatId || parsed.chats[0].id,
+          chats: updatedChats.map((c: LocalChat) => toChat(c)),
+          activeChatId: parsed.activeChatId || updatedChats[0].id,
         };
       }
     } catch (err) {
@@ -65,7 +82,7 @@ const loadGuestState = (): { chats: Chat[]; activeChatId: string | null } => {
 
   const fallbackChat: LocalChat = {
     id: createGuestId(),
-    name: 'New chat',
+    name: defaultName,
     messages: [],
     code: '',
     createdAt: Date.now(),
@@ -138,6 +155,7 @@ const migrateLocalStorageData = async (userId: string): Promise<void> => {
 
 export const useChats = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -156,7 +174,7 @@ export const useChats = () => {
 
     if (!user) {
       setLoading(true);
-      const { chats: guestChats, activeChatId: guestActiveId } = loadGuestState();
+      const { chats: guestChats, activeChatId: guestActiveId } = loadGuestState(t('sidebar.newChat'));
       setChats(guestChats);
       setActiveChatId(guestActiveId);
       setLoading(false);
@@ -188,7 +206,7 @@ export const useChats = () => {
             .from('chats')
             .insert({
               user_id: user.id,
-              name: 'New chat',
+              name: t('sidebar.newChat'),
               messages: [],
               code: '',
             })
@@ -210,7 +228,7 @@ export const useChats = () => {
     };
     
     loadChats();
-  }, [user]);
+  }, [user, t]);
 
   const createChat = useCallback(
     async (customName?: string) => {
@@ -223,7 +241,7 @@ export const useChats = () => {
 
         const newChat: LocalChat = {
           id: createGuestId(),
-          name: customName || 'New chat',
+          name: customName || t('sidebar.newChat'),
           messages: [],
           code: '',
           createdAt: Date.now(),
@@ -242,7 +260,7 @@ export const useChats = () => {
           .from('chats')
           .insert({
             user_id: user.id,
-            name: customName || 'New chat',
+            name: customName || t('sidebar.newChat'),
             messages: [],
             code: '',
           })
@@ -261,7 +279,7 @@ export const useChats = () => {
       }
       return null;
     },
-    [user, chats]
+    [user, chats, t]
   );
 
   const switchChat = useCallback(
@@ -293,7 +311,7 @@ export const useChats = () => {
       // В гостевом режиме просто сбрасываем чат
       const freshChat: LocalChat = {
         id: createGuestId(),
-        name: 'New chat',
+        name: t('sidebar.newChat'),
         messages: [],
         code: '',
         createdAt: Date.now(),
@@ -329,7 +347,7 @@ export const useChats = () => {
       console.error('Error deleting chat:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete chat');
     }
-  }, [user, chats, activeChatId, createChat]);
+  }, [user, chats, activeChatId, createChat, t]);
 
   const renameChat = useCallback(
     async (chatId: string, newName: string) => {
@@ -488,6 +506,60 @@ export const useChats = () => {
     }
   }, [activeChat, user]);
 
+  const updateDefaultChatNames = useCallback(async () => {
+    const defaultName = t('sidebar.newChat');
+    
+    if (!user) {
+      // Update guest chats
+      setChats((prev) => {
+        const updated = prev.map((chat) => {
+          const isDefaultName = chat.name === 'New chat' || chat.name === 'Новый чат';
+          if (isDefaultName && chat.messages.length === 0) {
+            return { ...chat, name: defaultName };
+          }
+          return chat;
+        });
+        
+        if (JSON.stringify(updated) !== JSON.stringify(prev)) {
+          persistGuestState(updated.map(toLocalChat), activeChatId);
+        }
+        
+        return updated;
+      });
+    } else {
+      // Update user chats in database
+      try {
+        const chatsToUpdate = chats.filter(
+          (chat) => (chat.name === 'New chat' || chat.name === 'Новый чат') && chat.messages.length === 0
+        );
+        
+        if (chatsToUpdate.length > 0) {
+          const updates = chatsToUpdate.map((chat) =>
+            supabase
+              .from('chats')
+              .update({ name: defaultName })
+              .eq('id', chat.id)
+              .eq('user_id', user.id)
+          );
+          
+          await Promise.all(updates);
+          
+          setChats((prev) =>
+            prev.map((chat) => {
+              const isDefaultName = chat.name === 'New chat' || chat.name === 'Новый чат';
+              if (isDefaultName && chat.messages.length === 0) {
+                return { ...chat, name: defaultName };
+              }
+              return chat;
+            })
+          );
+        }
+      } catch (err) {
+        console.error('Error updating default chat names:', err);
+      }
+    }
+  }, [user, chats, activeChatId, t]);
+
   return {
     chats,
     activeChat,
@@ -501,5 +573,6 @@ export const useChats = () => {
     updateChatMessages,
     updateChatCode,
     clearCurrentChat,
+    updateDefaultChatNames,
   };
 };

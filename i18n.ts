@@ -282,9 +282,19 @@ const resources = {
   },
 };
 
+// Detect browser language
+const getBrowserLanguage = (): string => {
+  const browserLang = navigator.language || (navigator as any).userLanguage;
+  // Extract language code (e.g., 'ru-RU' -> 'ru', 'en-US' -> 'en')
+  const langCode = browserLang.split('-')[0].toLowerCase();
+  // Check if we support this language
+  const supportedLangs = ['en', 'ru'];
+  return supportedLangs.includes(langCode) ? langCode : 'en';
+};
+
 i18n.use(initReactI18next).init({
   resources,
-  lng: 'en',
+  lng: getBrowserLanguage(),
   fallbackLng: 'en',
   supportedLngs: ['en', 'ru'],
   interpolation: {

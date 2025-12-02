@@ -46,9 +46,9 @@ const UserIcon = () => (
 );
 
 const RefreshIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 animate-spin">
-      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-    </svg>
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 animate-spin">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+  </svg>
 );
 
 const CollapseIcon = () => (
@@ -122,6 +122,7 @@ const App: React.FC = () => {
     updateChatMessages,
     updateChatCode,
     clearCurrentChat,
+    updateDefaultChatNames,
   } = useChats();
 
   const [prompt, setPrompt] = useState('');
@@ -185,7 +186,7 @@ const App: React.FC = () => {
   const hasDiagram = Boolean(renderedCode.trim());
   const hasHistory = messages.length > 0;
   const canReset = Boolean(currentCode || prompt || hasHistory);
-  
+
   // Auto scroll to bottom of chat
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -435,8 +436,10 @@ const App: React.FC = () => {
     (lng: string) => {
       if (i18n.language === lng) return;
       i18n.changeLanguage(lng);
+      // Update default chat names after language change
+      setTimeout(() => updateDefaultChatNames(), 100);
     },
-    [i18n]
+    [i18n, updateDefaultChatNames]
   );
 
   return (
@@ -463,9 +466,8 @@ const App: React.FC = () => {
 
       {/* Sidebar / Chat Area */}
       <div
-        className={`${
-          isSidebarOpen ? 'flex' : 'hidden'
-        } absolute md:static inset-y-0 left-0 w-full md:w-[380px] flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 shrink-0 relative`}
+        className={`${isSidebarOpen ? 'flex' : 'hidden'
+          } absolute md:static inset-y-0 left-0 w-full md:w-[380px] flex-col border-r border-slate-200 bg-white shadow-lg h-full z-20 shrink-0 relative`}
       >
         {chatsLoading && (
           <div className="absolute inset-0 bg-white/90 backdrop-blur-sm z-50 flex items-center justify-center">
@@ -483,7 +485,7 @@ const App: React.FC = () => {
               <img src="./logo.png" alt="Dream AI Logo" className="w-12 h-12 object-contain" />
               <div>
                 <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                 Dream AI
+                  Dream AI
                 </h1>
                 <p className="text-slate-500 text-xs mt-1">UML Generator & Code</p>
               </div>
@@ -534,9 +536,8 @@ const App: React.FC = () => {
                   {chats.map((chat) => (
                     <div
                       key={chat.id}
-                      className={`flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ${
-                        chat.id === activeChat?.id ? 'bg-blue-50' : ''
-                      }`}
+                      className={`flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ${chat.id === activeChat?.id ? 'bg-blue-50' : ''
+                        }`}
                     >
                       <button
                         onClick={() => {
@@ -579,11 +580,10 @@ const App: React.FC = () => {
           <div className="flex items-center gap-2 text-sm font-medium">
             <button
               onClick={() => setActiveSidebarTab('chat')}
-              className={`flex-1 px-3 py-2 rounded-lg border transition-colors ${
-                activeSidebarTab === 'chat'
-                  ? 'bg-blue-50 text-blue-600 border-blue-200'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
-              }`}
+              className={`flex-1 px-3 py-2 rounded-lg border transition-colors ${activeSidebarTab === 'chat'
+                ? 'bg-blue-50 text-blue-600 border-blue-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
+                }`}
             >
               <span className="inline-flex items-center justify-center gap-2">
                 <SparklesIcon />
@@ -592,11 +592,10 @@ const App: React.FC = () => {
             </button>
             <button
               onClick={() => setActiveSidebarTab('code')}
-              className={`flex-1 px-3 py-2 rounded-lg border transition-colors ${
-                activeSidebarTab === 'code'
-                  ? 'bg-blue-50 text-blue-600 border-blue-200'
-                  : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
-              }`}
+              className={`flex-1 px-3 py-2 rounded-lg border transition-colors ${activeSidebarTab === 'code'
+                ? 'bg-blue-50 text-blue-600 border-blue-200'
+                : 'bg-white text-slate-600 border-slate-200 hover:border-blue-200 hover:text-blue-600'
+                }`}
             >
               <span className="inline-flex items-center justify-center gap-2">
                 <CodeIcon />
@@ -608,157 +607,152 @@ const App: React.FC = () => {
 
         {/* Tabs content */}
         <div className="flex-1 flex flex-col min-h-0">
-          <div className={`flex-1 flex flex-col min-h-0 ${
-            activeSidebarTab === 'chat' ? 'flex' : 'hidden'
-          }`}>
+          <div className={`flex-1 flex flex-col min-h-0 ${activeSidebarTab === 'chat' ? 'flex' : 'hidden'
+            }`}>
             {/* Chat History */}
             <div ref={chatContainerRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50">
-                {messages.length === 0 && !user && (
-                  <div className="text-center mt-10 text-slate-600 text-sm px-4">
-                    <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-blue-50 border-2 border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-emerald-600">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a3 3 0 110 6 3 3 0 010-6z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5c-4.97 0-9 3.134-9 7 0 2.092 1.178 3.954 3.054 5.196.399.268.664.712.664 1.2v1.479c0 .856.92 1.4 1.666.97l1.89-1.09a2.25 2.25 0 011.125-.3h1.395c4.97 0 9-3.134 9-7s-4.03-7-9-7z" />
-                      </svg>
+              {messages.length === 0 && !user && (
+                <div className="text-center mt-10 text-slate-600 text-sm px-4">
+                  <div className="w-16 h-16 bg-gradient-to-br from-emerald-100 to-blue-50 border-2 border-emerald-200 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-emerald-600">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.75a3 3 0 110 6 3 3 0 010-6z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5c-4.97 0-9 3.134-9 7 0 2.092 1.178 3.954 3.054 5.196.399.268.664.712.664 1.2v1.479c0 .856.92 1.4 1.666.97l1.89-1.09a2.25 2.25 0 011.125-.3h1.395c4.97 0 9-3.134 9-7s-4.03-7-9-7z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-semibold text-slate-700 mb-2">{t('sidebar.guestTitle')}</h3>
+                  <p className="text-slate-500 mb-3">
+                    {t('sidebar.guestUsage', { remaining: guestRequestsLeft, limit: guestRequestLimit })}
+                  </p>
+                  <p className="text-slate-500 mb-4">{t('sidebar.guestSaved')}</p>
+                  <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+                    <button
+                      onClick={() => setIsAuthModalOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
+                    >
+                      <UserIcon />
+                      <span>{t('sidebar.guestCta')}</span>
+                    </button>
+                    <span className="text-xs text-slate-400">{t('sidebar.guestHint')}</span>
+                  </div>
+                </div>
+              )}
+              {messages.length === 0 && user && (
+                <div className="text-center mt-10 text-slate-400 text-sm px-4">
+                  <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <SparklesIcon />
+                  </div>
+                  <p>{t('sidebar.emptyPrompt')}</p>
+                  <p className="mt-2 text-xs">{t('sidebar.emptyHint')}</p>
+                </div>
+              )}
+
+              {messages.map((msg) => (
+                <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`flex max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-2`}>
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-1 ${msg.role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-600'
+                      }`}>
+                      {msg.role === 'user' ? <UserIcon /> : <SparklesIcon />}
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-700 mb-2">{t('sidebar.guestTitle')}</h3>
-                    <p className="text-slate-500 mb-3">
-                      {t('sidebar.guestUsage', { remaining: guestRequestsLeft, limit: guestRequestLimit })}
-                    </p>
-                    <p className="text-slate-500 mb-4">{t('sidebar.guestSaved')}</p>
-                    <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
-                      <button
-                        onClick={() => setIsAuthModalOpen(true)}
-                        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors shadow-sm font-medium"
-                      >
-                        <UserIcon />
-                        <span>{t('sidebar.guestCta')}</span>
-                      </button>
-                      <span className="text-xs text-slate-400">{t('sidebar.guestHint')}</span>
+                    <div className={`p-3 rounded-lg text-sm shadow-sm ${msg.role === 'user'
+                      ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none'
+                      : 'bg-blue-50 border border-blue-100 text-slate-800 rounded-tl-none'
+                      }`}>
+                      {msg.text}
                     </div>
                   </div>
-                )}
-                {messages.length === 0 && user && (
-                  <div className="text-center mt-10 text-slate-400 text-sm px-4">
-                    <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex justify-start w-full">
+                  <div className="flex max-w-[85%] items-start gap-2">
+                    <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1">
                       <SparklesIcon />
                     </div>
-                    <p>{t('sidebar.emptyPrompt')}</p>
-                    <p className="mt-2 text-xs">{t('sidebar.emptyHint')}</p>
-                  </div>
-                )}
-                
-                {messages.map((msg) => (
-                  <div key={msg.id} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`flex max-w-[85%] ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} items-start gap-2`}>
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-                        msg.role === 'user' ? 'bg-slate-200 text-slate-600' : 'bg-blue-100 text-blue-600'
-                      }`}>
-                        {msg.role === 'user' ? <UserIcon /> : <SparklesIcon />}
-                      </div>
-                      <div className={`p-3 rounded-lg text-sm shadow-sm ${
-                        msg.role === 'user' 
-                          ? 'bg-white border border-slate-200 text-slate-800 rounded-tr-none' 
-                          : 'bg-blue-50 border border-blue-100 text-slate-800 rounded-tl-none'
-                      }`}>
-                        {msg.text}
-                      </div>
+                    <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg rounded-tl-none shadow-sm">
+                      <LoadingSpinner />
                     </div>
                   </div>
-                ))}
-                
-                {isLoading && (
-                  <div className="flex justify-start w-full">
-                    <div className="flex max-w-[85%] items-start gap-2">
-                      <div className="w-6 h-6 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 mt-1">
-                        <SparklesIcon />
-                      </div>
-                      <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg rounded-tl-none shadow-sm">
-                         <LoadingSpinner />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
+            </div>
 
-              {/* Input Area */}
-              <div className="p-4 bg-white shrink-0 border-t border-slate-200 space-y-3">
-                <div className="relative">
-                  <textarea
-                    ref={promptInputRef}
-                    id="prompt"
-                    disabled={inputDisabled}
-                    className={`w-full p-3 pr-12 border border-slate-200 rounded-xl text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[90px] ${
-                      inputDisabled ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'
+            {/* Input Area */}
+            <div className="p-4 bg-white shrink-0 border-t border-slate-200 space-y-3">
+              <div className="relative">
+                <textarea
+                  ref={promptInputRef}
+                  id="prompt"
+                  disabled={inputDisabled}
+                  className={`w-full p-3 pr-12 border border-slate-200 rounded-xl text-slate-800 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all resize-none shadow-sm text-sm leading-relaxed min-h-[90px] ${inputDisabled ? 'bg-slate-100 cursor-not-allowed opacity-60' : 'bg-slate-50'
                     }`}
-                    placeholder={
-                      isGuest
-                        ? isGuestLimitReached
-                          ? t('input.limitReached')
-                          : t('input.guestPlaceholder', { remaining: guestRequestsLeft, limit: guestRequestLimit })
-                        : currentCode
-                          ? t('input.improvePlaceholder')
-                          : t('input.defaultPlaceholder')
-                    }
-                    value={prompt}
-                    onChange={(e) => setPrompt(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                  />
-                  {isLoading ? (
-                    <button
-                      onClick={handleStop}
-                      className="absolute bottom-3 right-3 p-2 rounded-lg text-white bg-red-500 hover:bg-red-600 shadow-sm transition-all transform active:scale-90"
-                      title={t('input.stopTitle')}
-                      aria-label={t('input.stopTitle')}
-                    >
-                      <StopIcon />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleGenerate}
-                      disabled={!prompt.trim() || inputDisabled}
-                      className={`
+                  placeholder={
+                    isGuest
+                      ? isGuestLimitReached
+                        ? t('input.limitReached')
+                        : t('input.guestPlaceholder', { remaining: guestRequestsLeft, limit: guestRequestLimit })
+                      : currentCode
+                        ? t('input.improvePlaceholder')
+                        : t('input.defaultPlaceholder')
+                  }
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                {isLoading ? (
+                  <button
+                    onClick={handleStop}
+                    className="absolute bottom-3 right-3 p-2 rounded-lg text-white bg-red-500 hover:bg-red-600 shadow-sm transition-all transform active:scale-90"
+                    title={t('input.stopTitle')}
+                    aria-label={t('input.stopTitle')}
+                  >
+                    <StopIcon />
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleGenerate}
+                    disabled={!prompt.trim() || inputDisabled}
+                    className={`
                         absolute bottom-3 right-3 p-2 rounded-lg text-white transition-all transform active:scale-90
                         ${!prompt.trim() || inputDisabled
-                          ? 'bg-slate-300 cursor-not-allowed' 
-                          : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
-                        }
+                        ? 'bg-slate-300 cursor-not-allowed'
+                        : 'bg-blue-600 hover:bg-blue-700 shadow-sm'
+                      }
                       `}
-                      title={isGuestLimitReached ? t('chat.guestLimitReached') : t('input.sendTitle')}
-                      aria-label={t('input.send')}
-                    >
-                      <SendIcon />
-                    </button>
-                  )}
-                </div>
-                <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>
-                    <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> {t('input.sendShortcut')}
-                  </span>
-                  {isLoading && (
-                    <span className="flex items-center gap-1 text-blue-500">
-                      <RefreshIcon />
-                      <span>{t('input.waiting')}</span>
-                    </span>
-                  )}
-                </div>
-                {error && (
-                  <div className="p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
-                    {error}
-                  </div>
+                    title={isGuestLimitReached ? t('chat.guestLimitReached') : t('input.sendTitle')}
+                    aria-label={t('input.send')}
+                  >
+                    <SendIcon />
+                  </button>
                 )}
+              </div>
+              <div className="flex items-center justify-between text-xs text-slate-400">
+                <span>
+                  <kbd className="font-sans bg-slate-100 px-1 rounded border border-slate-200">Ctrl + Enter</kbd> {t('input.sendShortcut')}
+                </span>
+                {isLoading && (
+                  <span className="flex items-center gap-1 text-blue-500">
+                    <RefreshIcon />
+                    <span>{t('input.waiting')}</span>
+                  </span>
+                )}
+              </div>
+              {error && (
+                <div className="p-2 bg-red-50 text-red-600 text-xs rounded border border-red-100">
+                  {error}
+                </div>
+              )}
             </div>
           </div>
 
-          <div className={`flex-1 flex flex-col min-h-0 min-w-0 ${
-            activeSidebarTab === 'code' ? 'flex' : 'hidden'
-          }`}>
+          <div className={`flex-1 flex flex-col min-h-0 min-w-0 ${activeSidebarTab === 'code' ? 'flex' : 'hidden'
+            }`}>
             <div className="h-full border-t border-slate-200 flex flex-col min-h-0 min-w-0">
-               <div className="flex-1 min-h-0 min-w-0">
-                 <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
-                   <Editor value={currentCode} onChange={handleCodeChange} onFixCode={handleFixCode} />
-                 </Suspense>
-               </div>
+              <div className="flex-1 min-h-0 min-w-0">
+                <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
+                  <Editor value={currentCode} onChange={handleCodeChange} onFixCode={handleFixCode} />
+                </Suspense>
+              </div>
             </div>
           </div>
         </div>
@@ -780,10 +774,10 @@ const App: React.FC = () => {
             )}
             <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">{t('toolbar.canvas')}</span>
             {isDebouncing && (
-                 <div className="flex items-center gap-2 text-xs text-blue-500 animate-pulse">
-                     <RefreshIcon />
-                     <span>{t('toolbar.syncing')}</span>
-                 </div>
+              <div className="flex items-center gap-2 text-xs text-blue-500 animate-pulse">
+                <RefreshIcon />
+                <span>{t('toolbar.syncing')}</span>
+              </div>
             )}
             {!isDebouncing && hasDiagram && (
               <div className="text-xs text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-full">
@@ -791,7 +785,7 @@ const App: React.FC = () => {
               </div>
             )}
           </div>
-          
+
           <div className="flex items-center space-x-2 relative" ref={exportTriggerRef}>
             <button
               onClick={handleCopyCode}
@@ -806,7 +800,7 @@ const App: React.FC = () => {
             </button>
 
             <div className="flex items-center space-x-2 relative">
-              <button 
+              <button
                 ref={exportButtonRef}
                 onClick={toggleExportMenu}
                 disabled={!hasDiagram}
@@ -829,19 +823,19 @@ const App: React.FC = () => {
                     }}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <button 
-                        onClick={() => exportDiagram('svg')} 
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
+                    <button
+                      onClick={() => exportDiagram('svg')}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
                     >
-                        <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">SVG</div>
-                        <span>{t('toolbar.exportVector')}</span>
+                      <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">SVG</div>
+                      <span>{t('toolbar.exportVector')}</span>
                     </button>
-                    <button 
-                        onClick={() => exportDiagram('png')} 
-                        className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
+                    <button
+                      onClick={() => exportDiagram('png')}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 flex items-center gap-3 group"
                     >
-                        <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">PNG</div>
-                        <span>{t('toolbar.exportImage')}</span>
+                      <div className="w-8 h-6 flex items-center justify-center bg-slate-100 rounded text-[10px] font-mono text-slate-500 group-hover:bg-blue-100 group-hover:text-blue-600 border border-slate-200">PNG</div>
+                      <span>{t('toolbar.exportImage')}</span>
                     </button>
                   </div>,
                   document.body
@@ -927,11 +921,10 @@ const App: React.FC = () => {
                               <button
                                 key={lang.code}
                                 onClick={() => handleLanguageChange(lang.code)}
-                                className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${
-                                  isActive
-                                    ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                    : 'bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-700'
-                                }`}
+                                className={`px-3 py-1.5 rounded-lg border text-sm transition-colors ${isActive
+                                  ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                  : 'bg-white border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-700'
+                                  }`}
                                 aria-pressed={isActive}
                               >
                                 {lang.label}
@@ -967,23 +960,23 @@ const App: React.FC = () => {
 
         {/* Diagram Container */}
         <div className="flex-1 overflow-hidden p-0 flex items-center justify-center relative" id="diagram-container">
-           {/* Background Grid Pattern */}
-           <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0" 
-                style={{
-                  backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)', 
-                  backgroundSize: '24px 24px'
-                }}
-           ></div>
-           
-           <div className="w-full h-full relative z-10">
-             {/* Pass renderedCode (debounced) to renderer */}
-             <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
-               <MermaidRenderer 
-                  code={renderedCode} 
-                  onError={handleError}
-               />
-             </Suspense>
-           </div>
+          {/* Background Grid Pattern */}
+          <div className="absolute inset-0 opacity-[0.03] pointer-events-none z-0"
+            style={{
+              backgroundImage: 'radial-gradient(#475569 1px, transparent 1px)',
+              backgroundSize: '24px 24px'
+            }}
+          ></div>
+
+          <div className="w-full h-full relative z-10">
+            {/* Pass renderedCode (debounced) to renderer */}
+            <Suspense fallback={<div className="flex items-center justify-center h-full"><LoadingSpinner /></div>}>
+              <MermaidRenderer
+                code={renderedCode}
+                onError={handleError}
+              />
+            </Suspense>
+          </div>
         </div>
       </div>
 
