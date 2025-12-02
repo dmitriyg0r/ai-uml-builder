@@ -169,6 +169,7 @@ export const useChats = () => {
   // Загрузка чатов при монтировании
   useEffect(() => {
     const currentUserKey = user ? user.id : 'guest';
+    // Only load once per user, ignore language changes
     if (loadedForUserRef.current === currentUserKey) {
       return;
     }
@@ -234,7 +235,8 @@ export const useChats = () => {
     };
     
     loadChats();
-  }, [user]); // Removed 't' dependency to prevent re-loading on language change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]); // Only depend on user, not 't' to prevent re-loading on language change
 
   const createChat = useCallback(
     async (customName?: string) => {

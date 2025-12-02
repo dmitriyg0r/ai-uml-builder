@@ -46,3 +46,4 @@ src-tauri/gen
 *.sln
 *.sw?
 WARP.md1
+pushrelease.md
