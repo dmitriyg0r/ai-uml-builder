@@ -2,8 +2,6 @@
 // Comment this out after fixing
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use tauri::Manager;
-
 fn main() {
     println!("Starting Tauri application...");
     
@@ -13,6 +11,7 @@ fn main() {
             
             #[cfg(debug_assertions)]
             {
+                use tauri::Manager;
                 let window = app.get_webview_window("main").unwrap();
                 window.open_devtools();
                 println!("DevTools opened");
