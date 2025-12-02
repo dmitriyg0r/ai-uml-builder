@@ -17,7 +17,7 @@
 
   ![React](https://img.shields.io/badge/React-19-blue?logo=react)
   ![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
-  ![Electron](https://img.shields.io/badge/Electron-Desktop-47848F?logo=electron)
+  ![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri)
   ![License](https://img.shields.io/badge/License-Proprietary-red)
   [![GitHub stars](https://img.shields.io/github/stars/dmitriyg0r/ai-uml-builder?style=social)](https://github.com/dmitriyg0r/ai-uml-builder/stargazers)
 
@@ -66,9 +66,10 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 - **And many more!** - Full Mermaid.js support
 
 ### 💻 Desktop-First Experience
-- **Cross-Platform** - Works on Windows, macOS (Intel & Apple Silicon), and Linux
+- **Cross-Platform** - Works on Windows, macOS (Apple Silicon), and Linux
 - **Offline Editing** - Edit diagrams without internet (generation requires API)
-- **Native Performance** - Built with Electron for smooth experience
+- **Native Performance** - Built with Tauri for blazing-fast, lightweight experience
+- **Small Size** - Only ~5-15 MB (vs 130 MB with Electron)
 - **User Authentication** - Save and sync your diagrams with Supabase
 - **Multi-Language Interface** - Full support for English and Russian (auto-detected)
 
@@ -101,9 +102,9 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 </div>
 
 **Platform-specific builds:**
-- 🍎 **macOS**: Apple Silicon (`mac-arm64`) and Intel (`mac`)
-- 🪟 **Windows**: x64 installer
-- 🐧 **Linux**: x64 AppImage/deb
+- 🍎 **macOS**: Apple Silicon (ARM64) - DMG installer
+- 🪟 **Windows**: x64 - MSI installer
+- 🐧 **Linux**: x64 - AppImage/deb
 
 > 💡 **No setup required!** The desktop app comes ready to use immediately.
 
@@ -117,6 +118,7 @@ If you want to run from source or contribute:
 #### Prerequisites
 
 - Node.js (LTS version recommended)
+- Rust (for Tauri) - Install via: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh` or `brew install rust`
 
 #### Installation
 
@@ -154,7 +156,7 @@ If you want to run from source or contribute:
    npm run dev
    ```
    
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
+   This will start both Vite dev server and Tauri desktop app.
 
 </details>
 
@@ -277,7 +279,10 @@ ai-uml-builder/
 ├── services/            # External integrations
 │   ├── aisetService.ts # Polza AI API
 │   └── supabaseClient.ts # Database connection
-├── electron/            # Electron main process
+├── src-tauri/           # Tauri backend (Rust)
+│   ├── src/            # Rust source code
+│   ├── icons/          # App icons
+│   └── tauri.conf.json # Tauri configuration
 ├── i18n.ts             # Internationalization (i18n) configuration
 └── types.ts            # TypeScript definitions
 ```
@@ -288,7 +293,7 @@ ai-uml-builder/
 - ⚛️ **React 19** - Modern UI framework with hooks
 - 📘 **TypeScript** - Type-safe development
 - ⚡ **Vite** - Lightning-fast build tool
-- 🖥️ **Electron** - Cross-platform desktop app
+- 🦀 **Tauri 2.0** - Lightweight, secure desktop framework with Rust backend
 
 ### Key Libraries
 - 🎨 **Tailwind CSS** - Utility-first styling
@@ -306,13 +311,12 @@ ai-uml-builder/
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server |
-| `npm run build` | Build web + Electron for all platforms |
-| `npm run build:mac` | Build for macOS (ARM64 + Intel) |
+| `npm run dev` | Start Tauri development app |
+| `npm run build` | Build Tauri app for current platform |
+| `npm run build:mac` | Build for macOS (ARM64) |
 | `npm run build:win` | Build for Windows (x64) |
 | `npm run build:linux` | Build for Linux (x64) |
-| `npm run build:all` | Build for all platforms |
-| `npm run preview` | Preview production build |
+| `npm run preview` | Preview Vite build |
 
 ## 🤝 Contributing
 

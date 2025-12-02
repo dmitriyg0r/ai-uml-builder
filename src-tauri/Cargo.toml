@@ -1,0 +1,16 @@
+[package]
+name = "ai-uml-builder"
+version = "0.0.4"
+description = "AI UML Builder"
+authors = ["you"]
+license = ""
+repository = ""
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

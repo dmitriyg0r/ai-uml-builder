@@ -13,8 +13,15 @@ node_modules
 # Build output
 dist
 dist-ssr
-dist-electron
-release
+
+# Tauri build artifacts
+src-tauri/target
+src-tauri/Cargo.lock
+src-tauri/WixTools
+src-tauri/gen
+
+# Keep Tauri icons (don't ignore)
+!src-tauri/icons/
 
 # Environment
 .env
@@ -22,11 +29,11 @@ release
 .env*.local
 *.local
 
-# Icon generation artifacts
-icon.iconset
-icon.icns
-icon.ico
-icon-512.png
+# Icon generation artifacts (root level only, keep src-tauri/icons/)
+/icon.iconset
+/icon.icns
+/icon.ico
+/icon-512.png
 
 # Editor directories and files
 .vscode/*
