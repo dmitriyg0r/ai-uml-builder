@@ -80,6 +80,8 @@ const loadGuestState = (defaultName: string): { chats: Chat[]; activeChatId: str
     }
   }
 
+  // Only create fallback chat if localStorage is truly empty
+  // This prevents creating duplicate chats on every app restart
   const fallbackChat: LocalChat = {
     id: createGuestId(),
     name: defaultName,
@@ -175,7 +177,11 @@ export const useChats = () => {
     if (!user) {
       setLoading(true);
       const { chats: guestChats, activeChatId: guestActiveId } = loadGuestState(t('sidebar.newChat'));
-      setChats(guestChats);
+      // Only update state if chats actually changed to prevent unnecessary re-renders
+      setChats((prev) => {
+        if (JSON.stringify(prev) === JSON.stringify(guestChats)) return prev;
+        return guestChats;
+      });
       setActiveChatId(guestActiveId);
       setLoading(false);
       return;
@@ -228,7 +234,7 @@ export const useChats = () => {
     };
     
     loadChats();
-  }, [user, t]);
+  }, [user]); // Removed 't' dependency to prevent re-loading on language change
 
   const createChat = useCallback(
     async (customName?: string) => {
