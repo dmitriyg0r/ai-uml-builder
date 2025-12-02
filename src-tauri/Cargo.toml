@@ -1,6 +1,6 @@
 [package]
 name = "ai-uml-builder"
-version = "0.0.10"
+version = "0.1.0"
 description = "AI UML Builder"
 authors = ["you"]
 license = ""
