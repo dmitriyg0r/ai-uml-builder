@@ -37,6 +37,15 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 
 ![Demo](demo.gif)
 
+### 🆕 Latest Updates
+
+**v0.0.4** - Multi-Language Support
+- 🌍 Full interface localization (English & Russian)
+- 🤖 AI-generated chat titles from your first prompt
+- 🔄 Automatic chat name translation when switching languages
+- 🎯 Smart language detection based on browser settings
+- 📝 Improved user experience for international users
+
 
 
 ## 🎯 Key Features
@@ -46,6 +55,7 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 - **Context-Aware Generation** - AI understands complex system architectures
 - **Iterative Refinement** - Ask for changes and improvements naturally
 - **Smart Formatting** - Auto-formats code for readability
+- **Auto-Generated Titles** - AI creates meaningful chat names from your first prompt
 
 ### 📊 Comprehensive Diagram Support
 - **Class Diagrams** - Model object-oriented systems
@@ -60,6 +70,7 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 - **Offline Editing** - Edit diagrams without internet (generation requires API)
 - **Native Performance** - Built with Electron for smooth experience
 - **User Authentication** - Save and sync your diagrams with Supabase
+- **Multi-Language Interface** - Full support for English and Russian (auto-detected)
 
 ### 🎨 Professional Editing Tools
 - **Syntax Highlighting** - Color-coded Mermaid editor
@@ -73,6 +84,7 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 - **Secure Auth** - Optional Supabase authentication
 - **Local Storage** - Your data stays on your device in guest mode
 - **API Key Safety** - Environment variables for sensitive data
+- **Data Migration** - Seamless migration from guest to authenticated mode
 
 ## 🚀 Quick Start
 
@@ -150,58 +162,102 @@ If you want to run from source or contribute:
 
 ### Basic Workflow
 
-1. **💬 Describe Your Diagram**
+1. **🌍 Choose Your Language**
+   - Interface automatically detects your browser language
+   - Manually switch between English and Russian in Settings
+   - Chat names update automatically when changing language
+
+2. **💬 Describe Your Diagram**
    ```text
    Create a class diagram for an e-commerce system with User, Product, 
    Order, and Payment classes. Users can place orders containing products.
    ```
+   Or in Russian:
+   ```text
+   Создай диаграмму классов для системы электронной коммерции с классами 
+   Пользователь, Товар, Заказ и Платёж
+   ```
 
-2. **✨ Generate with AI**
+3. **✨ Generate with AI**
    - Click the send button (or press Ctrl+Enter)
    - Watch as AI creates your diagram
+   - AI automatically generates a meaningful chat title
    - Guest users get 3 free AI requests
 
-3. **✏️ Edit the Code**
+4. **✏️ Edit the Code**
    - Switch to the "Code" tab
    - Make manual adjustments to the Mermaid code
    - Click the green "Run" button to update the diagram
 
-4. **🎨 Refine with AI**
+5. **🎨 Refine with AI**
    ```text
    Add a shopping cart class that connects users and products
    ```
 
-5. **💾 Export Your Work**
+6. **💾 Export Your Work**
    - **SVG**: Vector format for documentation
    - **PNG**: Raster image for presentations
    - **Copy Code**: Use in other Mermaid tools
+
+### 🌍 Language Support
+
+The interface automatically detects your browser language and supports:
+- 🇬🇧 **English** - Full interface translation
+- 🇷🇺 **Russian** - Полный перевод интерфейса
+
+**Features:**
+- Auto-detection based on browser settings
+- Manual language switching in Settings menu
+- Chat names automatically update when changing language
+- Seamless experience in both languages
 
 ### Example Prompts
 
 <details>
 <summary>📝 Class Diagrams</summary>
 
+**English:**
 ```text
 Create a class diagram for a library management system with 
 Book, Member, Loan, and Librarian classes
+```
+
+**Russian:**
+```text
+Создай диаграмму классов для системы управления библиотекой 
+с классами Книга, Читатель, Выдача и Библиотекарь
 ```
 </details>
 
 <details>
 <summary>🔄 Sequence Diagrams</summary>
 
+**English:**
 ```text
 Sequence diagram for user authentication: user enters credentials,
 system validates, checks database, returns token
+```
+
+**Russian:**
+```text
+Диаграмма последовательности для аутентификации: пользователь вводит данные,
+система проверяет, обращается к базе данных, возвращает токен
 ```
 </details>
 
 <details>
 <summary>📊 Flowcharts</summary>
 
+**English:**
 ```text
 Flowchart for order processing: receive order, check inventory,
 if available then process payment and ship, else notify customer
+```
+
+**Russian:**
+```text
+Блок-схема обработки заказа: получить заказ, проверить наличие,
+если есть - обработать платёж и отправить, иначе уведомить клиента
 ```
 </details>
 
@@ -222,6 +278,7 @@ ai-uml-builder/
 │   ├── aisetService.ts # Polza AI API
 │   └── supabaseClient.ts # Database connection
 ├── electron/            # Electron main process
+├── i18n.ts             # Internationalization (i18n) configuration
 └── types.ts            # TypeScript definitions
 ```
 
@@ -238,6 +295,7 @@ ai-uml-builder/
 - 📊 **Mermaid.js** - Diagram rendering engine
 - 🎯 **Prism.js** - Syntax highlighting
 - 🔍 **react-zoom-pan-pinch** - Diagram navigation
+- 🌍 **react-i18next** - Internationalization framework
 
 ### Backend Services
 - 🤖 **Polza AI** - DeepSeek AI integration
@@ -292,11 +350,15 @@ Every star, share, and contribution helps make this project better! 🙏
 - [x] Guest mode (3 free requests)
 - [x] Auto-scaling diagrams
 - [x] Desktop apps (Win/Mac/Linux)
+- [x] Multi-language interface (EN/RU)
+- [x] Auto-generated chat titles
+- [x] Language-aware chat names
 
 ### 🚧 In Progress
 - [ ] Dark/light theme toggle
 - [ ] More diagram templates
 - [ ] Diagram versioning
+- [ ] Additional language support
 
 ### 💭 Planned
 - [ ] Collaborative real-time editing
