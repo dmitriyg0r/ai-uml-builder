@@ -10,12 +10,15 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             println!("Tauri setup complete");
-            let window = app.get_webview_window("main").unwrap();
             
-            // Always open devtools to debug white screen
-            window.open_devtools();
+            #[cfg(debug_assertions)]
+            {
+                let window = app.get_webview_window("main").unwrap();
+                window.open_devtools();
+                println!("DevTools opened");
+            }
             
-            println!("Window created and devtools opened");
+            println!("Window created");
             Ok(())
         })
         .run(tauri::generate_context!())
