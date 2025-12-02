@@ -156,7 +156,7 @@ const migrateLocalStorageData = async (userId: string): Promise<void> => {
 };
 
 export const useChats = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { t } = useTranslation();
   const [chats, setChats] = useState<Chat[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
@@ -168,6 +168,11 @@ export const useChats = () => {
 
   // Загрузка чатов при монтировании
   useEffect(() => {
+    // Wait for auth state to resolve to avoid creating guest chats for logged-in users
+    if (authLoading) {
+      return;
+    }
+
     const currentUserKey = user ? user.id : 'guest';
     // Only load once per user, ignore language changes
     if (loadedForUserRef.current === currentUserKey) {
@@ -236,7 +241,7 @@ export const useChats = () => {
     
     loadChats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]); // Only depend on user, not 't' to prevent re-loading on language change
+  }, [user, authLoading]); // Only depend on user/auth state, not 't' to prevent re-loading on language change
 
   const createChat = useCallback(
     async (customName?: string) => {

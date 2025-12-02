@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect, Suspense } from 'react';
+import React, { useState, useCallback, useRef, useEffect, Suspense, useMemo, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import { generateMermaidCode, generateChatTitle, fixMermaidCode } from './services/aisetService';
@@ -8,11 +8,15 @@ import { useDebouncedValue } from './hooks/useDebouncedValue';
 import { useDiagramExport } from './hooks/useDiagramExport';
 import { useChats } from './hooks/useChats';
 import { useAuth } from './hooks/useAuth';
-import { AuthModal } from './components/Auth/AuthModal';
 import { ChatMessage } from './types';
 
 const MermaidRenderer = React.lazy(() => import('./components/MermaidRenderer'));
 const Editor = React.lazy(() => import('./components/Editor').then(module => ({ default: module.Editor })));
+const AuthModal = React.lazy(() =>
+  import(/* webpackPrefetch: true */ './components/Auth/AuthModal').then((module) => ({
+    default: module.AuthModal,
+  }))
+);
 
 // Icons
 const SendIcon = () => (
@@ -102,12 +106,63 @@ const SettingsIcon = () => (
 );
 
 
+type ChatListItemProps = {
+  chat: { id: string; name: string; updated_at: string };
+  isActive: boolean;
+  showDelete: boolean;
+  onSwitch: (id: string) => void;
+  onDelete: (id: string) => void;
+  deleteTitle: string;
+};
+
+const ChatListItem = memo<ChatListItemProps>(({ chat, isActive, showDelete, onSwitch, onDelete, deleteTitle }) => {
+  const formattedDate = useMemo(
+    () =>
+      new Date(chat.updated_at).toLocaleDateString('en-US', {
+        day: 'numeric',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    [chat.updated_at]
+  );
+
+  return (
+    <div
+      className={`flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ${
+        isActive ? 'bg-blue-50' : ''
+      }`}
+    >
+      <button onClick={() => onSwitch(chat.id)} className="flex-1 text-left truncate">
+        <div className="font-medium text-slate-700 truncate">{chat.name}</div>
+        <div className="text-xs text-slate-400">{formattedDate}</div>
+      </button>
+      {showDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(chat.id);
+          }}
+          className="ml-2 p-1 text-slate-400 hover:text-red-600 transition-colors"
+          title={deleteTitle}
+        >
+          <TrashIcon />
+        </button>
+      )}
+    </div>
+  );
+});
+
+ChatListItem.displayName = 'ChatListItem';
+
 type SidebarTab = 'chat' | 'code';
 
 const createId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
     ? crypto.randomUUID()
     : Date.now().toString(36);
+
+const EMPTY_MESSAGES: ChatMessage[] = [];
 
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -149,8 +204,29 @@ const App: React.FC = () => {
     setError(err);
   }, []);
 
-  const currentCode = activeChat?.code || '';
-  const messages = activeChat?.messages || [];
+  const handleChatSwitch = useCallback(
+    (id: string) => {
+      switchChat(id);
+      setIsChatsDropdownOpen(false);
+    },
+    [switchChat]
+  );
+
+  const handleChatDelete = useCallback((id: string) => {
+    setChatToDelete(id);
+    setIsChatsDropdownOpen(false);
+  }, []);
+
+  const handleCreateChat = useCallback(() => {
+    createChat();
+    setIsChatsDropdownOpen(false);
+  }, [createChat]);
+
+  const currentCode = useMemo(() => activeChat?.code || '', [activeChat?.id, activeChat?.code]);
+  const messages = useMemo(
+    () => activeChat?.messages ?? EMPTY_MESSAGES,
+    [activeChat?.id, activeChat?.messages]
+  );
   const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 300);
 
   const [showExportMenu, setShowExportMenu] = useState(false);
@@ -517,10 +593,7 @@ const App: React.FC = () => {
                 <div className="p-2">
                   {user ? (
                     <button
-                      onClick={() => {
-                        createChat();
-                        setIsChatsDropdownOpen(false);
-                      }}
+                      onClick={handleCreateChat}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <PlusIcon />
@@ -534,42 +607,15 @@ const App: React.FC = () => {
                 </div>
                 <div className="border-t border-slate-100">
                   {chats.map((chat) => (
-                    <div
+                    <ChatListItem
                       key={chat.id}
-                      className={`flex items-center justify-between px-3 py-2 text-sm hover:bg-slate-50 ${chat.id === activeChat?.id ? 'bg-blue-50' : ''
-                        }`}
-                    >
-                      <button
-                        onClick={() => {
-                          switchChat(chat.id);
-                          setIsChatsDropdownOpen(false);
-                        }}
-                        className="flex-1 text-left truncate"
-                      >
-                        <div className="font-medium text-slate-700 truncate">{chat.name}</div>
-                        <div className="text-xs text-slate-400">
-                          {new Date(chat.updated_at).toLocaleDateString('en-US', {
-                            day: 'numeric',
-                            month: 'short',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </div>
-                      </button>
-                      {chats.length > 1 && (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setChatToDelete(chat.id);
-                            setIsChatsDropdownOpen(false);
-                          }}
-                          className="ml-2 p-1 text-slate-400 hover:text-red-600 transition-colors"
-                          title={t('sidebar.deleteChat')}
-                        >
-                          <TrashIcon />
-                        </button>
-                      )}
-                    </div>
+                      chat={chat}
+                      isActive={chat.id === activeChat?.id}
+                      showDelete={chats.length > 1}
+                      onSwitch={handleChatSwitch}
+                      onDelete={handleChatDelete}
+                      deleteTitle={t('sidebar.deleteChat')}
+                    />
                   ))}
                 </div>
               </div>
@@ -989,7 +1035,9 @@ const App: React.FC = () => {
       )}
 
       {/* Auth Modal */}
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      <Suspense fallback={null}>
+        <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
+      </Suspense>
     </div>
   );
 };
