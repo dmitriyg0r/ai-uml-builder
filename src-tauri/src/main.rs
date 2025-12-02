@@ -1,4 +1,5 @@
-// Temporarily enable console for debugging
+// Enable console for debugging white screen issues
+// Comment this out after fixing
 // #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
@@ -7,11 +8,12 @@ fn main() {
     tauri::Builder::default()
         .setup(|app| {
             println!("Tauri setup complete");
-            #[cfg(debug_assertions)]
-            {
-                let window = app.get_webview_window("main").unwrap();
-                window.open_devtools();
-            }
+            let window = app.get_webview_window("main").unwrap();
+            
+            // Always open devtools to debug white screen
+            window.open_devtools();
+            
+            println!("Window created and devtools opened");
             Ok(())
         })
         .run(tauri::generate_context!())
