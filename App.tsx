@@ -8,6 +8,7 @@ import { useDebouncedValue } from './hooks/useDebouncedValue';
 import { useDiagramExport } from './hooks/useDiagramExport';
 import { useChats } from './hooks/useChats';
 import { useAuth } from './hooks/useAuth';
+import { useUpdater } from './hooks/useUpdater';
 import { ChatMessage } from './types';
 
 const MermaidRenderer = React.lazy(() => import('./components/MermaidRenderer'));
@@ -198,6 +199,15 @@ const App: React.FC = () => {
   });
 
   const { user, signOut } = useAuth();
+  
+  const { 
+    isChecking, 
+    updateAvailable, 
+    isDownloading, 
+    status: updateStatus, 
+    checkUpdate, 
+    installUpdate 
+  } = useUpdater();
 
   // Memoize setError to prevent MermaidRenderer re-renders
   const handleError = useCallback((err: string | null) => {
@@ -984,6 +994,35 @@ const App: React.FC = () => {
                   </div>
 
                   <div className="py-1 border-t border-slate-100">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (updateAvailable) {
+                          installUpdate();
+                        } else {
+                          checkUpdate();
+                        }
+                      }}
+                      disabled={isChecking || isDownloading}
+                      className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
+                    >
+                      <div className={`w-5 h-5 flex items-center justify-center ${isChecking || isDownloading ? 'animate-spin text-blue-600' : ''}`}>
+                        {isChecking || isDownloading ? (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                          </svg>
+                        ) : (
+                          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+                          </svg>
+                        )}
+                      </div>
+                      <div className="flex-1 overflow-hidden">
+                        <div className="truncate">{updateAvailable ? t('toolbar.installUpdate') : t('toolbar.checkUpdates')}</div>
+                        {updateStatus && <div className="text-[10px] text-slate-400 truncate">{updateStatus}</div>}
+                      </div>
+                    </button>
+
                     <button
                       onClick={() => {
                         signOut();

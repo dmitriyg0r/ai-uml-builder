@@ -196,6 +196,7 @@ export const useChats = () => {
     const loadChats = async () => {
       try {
         setLoading(true);
+        console.log('[useChats] Starting to load chats for user:', user.id);
         
         // Мигрируем данные из localStorage (если есть)
         await migrateLocalStorageData(user.id);
@@ -207,12 +208,18 @@ export const useChats = () => {
           .eq('user_id', user.id)
           .order('updated_at', { ascending: false });
         
-        if (fetchError) throw fetchError;
+        if (fetchError) {
+            console.error('[useChats] Supabase fetch error:', fetchError);
+            throw fetchError;
+        }
+
+        console.log('[useChats] Loaded chats:', data?.length);
         
         if (data && data.length > 0) {
           setChats(data);
           setActiveChatId(data[0].id);
         } else {
+          console.log('[useChats] No chats found, creating default.');
           // Создаем первый чат
           const { data: newChatData, error: createError } = await supabase
             .from('chats')
@@ -232,8 +239,10 @@ export const useChats = () => {
           }
         }
       } catch (err) {
-          console.error('Error loading chats:', err);
+        console.error('[useChats] Error loading chats:', err);
         setError(err instanceof Error ? err.message : 'Failed to load chats');
+        // Reset ref to allow retry on next attempt if needed
+        loadedForUserRef.current = null;
       } finally {
         setLoading(false);
       }

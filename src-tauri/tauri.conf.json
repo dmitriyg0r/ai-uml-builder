@@ -8,6 +8,14 @@
     "beforeBuildCommand": "vite build",
     "frontendDist": "../dist"
   },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/dmitriyg0r/ai-uml-builder/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDE5RUFENzY1Qjk4OTY1OTYKUldTV1pZbTVaZGZxR2FhQ25NaS9EaE81dTBWK3NwRGM2cVhPMlhRZWVEL3JubGhPbnN5NkVReXUK"
+    }
+  },
   "app": {
     "windows": [
       {
