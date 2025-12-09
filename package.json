@@ -1,9 +1,10 @@
 {
   "name": "ai-uml-builder",
   "private": true,
-  "version": "0.1.2",
+  "version": "0.1.3",
   "type": "module",
   "scripts": {
+    "tauri": "tauri",
     "dev": "tauri dev",
     "build": "tauri build",
     "build:mac": "tauri build --target aarch64-apple-darwin",
