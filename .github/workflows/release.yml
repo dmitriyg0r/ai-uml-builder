@@ -10,6 +10,7 @@ jobs:
       contents: write
     strategy:
       fail-fast: false
+      max-parallel: 1 # serialize to merge latest.json across platforms
       matrix:
         include:
           - platform: 'macos-latest' # для macOS
@@ -72,9 +73,15 @@ jobs:
           tagName: app-v__VERSION__
           releaseName: 'App v__VERSION__'
           releaseBody: ${{ env.RELEASE_BODY }}
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Download existing latest.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release download app-v${{ steps.get_version.outputs.VERSION }} --pattern latest.json --dir . || true
 
       - name: Generate latest.json
         run: node scripts/generate-latest.mjs
