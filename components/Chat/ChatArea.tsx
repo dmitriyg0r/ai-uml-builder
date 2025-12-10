@@ -181,7 +181,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
           </span>
           {isLoading && (
             <span className="flex items-center gap-1 text-blue-500">
-              <RefreshIcon />
+              <RefreshIcon className="animate-spin" />
               <span>{t('input.waiting')}</span>
             </span>
           )}

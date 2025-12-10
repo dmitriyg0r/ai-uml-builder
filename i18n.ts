@@ -216,7 +216,7 @@ const resources = {
         installUpdate: 'Установить обновление',
         updateStatusChecking: 'Проверка обновлений...',
         updateStatusAvailable: 'Доступно обновление: {{version}}',
-        updateStatusLatest: 'У вас последняя версия.',
+        updateStatusLatest: 'У вас самая актуальная версия.',
         updateStatusDownloading: 'Загрузка и установка...',
         updateStatusInstalled: 'Обновление установлено. Перезапуск...',
         updateStatusError: 'Ошибка: {{error}}',

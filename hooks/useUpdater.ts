@@ -27,8 +27,13 @@ export const useUpdater = () => {
       }
     } catch (err: any) {
       console.error(err);
-      setError(err.message || t('toolbar.updateStatusError', { error: 'Unknown' }));
-      setStatus(t('toolbar.updateStatusError', { error: err.message || 'Unknown' }));
+      const message = err instanceof Error
+        ? err.message
+        : typeof err === 'string'
+          ? err
+          : 'Unknown';
+      setError(message);
+      setStatus(t('toolbar.updateStatusError', { error: message }));
     } finally {
       setIsChecking(false);
     }

@@ -30,12 +30,6 @@ export const UserIcon = () => (
   </svg>
 );
 
-export const RefreshIcon = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-3 h-3 animate-spin">
-    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
-  </svg>
-);
-
 export const CollapseIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
     <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
@@ -83,5 +77,18 @@ export const SettingsIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
     <path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5c0-.414.336-.75.75-.75a7.5 7.5 0 0 1 7.5 7.5c0 .414-.336.75-.75.75h-.676a1.5 1.5 0 0 0-1.454 1.106l-.18.65a1.5 1.5 0 0 0 .327 1.376l.478.525a.75.75 0 0 1-.038 1.057l-1.286 1.143a.75.75 0 0 1-1.06-.02l-.48-.514a1.5 1.5 0 0 0-1.364-.422l-.662.15a1.5 1.5 0 0 0-1.124 1.27l-.078.67a.75.75 0 0 1-.744.664H9.75a7.5 7.5 0 0 1-7.5-7.5c0-.414.336-.75.75-.75h.676a1.5 1.5 0 0 0 1.454-1.106l.18-.65a1.5 1.5 0 0 0-.327-1.376l-.478-.525a.75.75 0 0 1 .038-1.057l1.286-1.143a.75.75 0 0 1 1.06.02l.48.514a1.5 1.5 0 0 0 1.364.422l.662-.15a1.5 1.5 0 0 0 1.124-1.27l.078-.67a.75.75 0 0 1 .744-.664H12" />
     <path strokeLinecap="round" strokeLinejoin="round" d="M14.25 12a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z" />
+  </svg>
+);
+
+export const RefreshIcon: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={1.5}
+    stroke="currentColor"
+    className={`w-3 h-3 ${className}`}
+  >
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
   </svg>
 );

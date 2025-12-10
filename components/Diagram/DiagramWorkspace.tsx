@@ -127,6 +127,8 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
     if (!isProfileMenuOpen) setIsSettingsOpen(false);
   }, [isProfileMenuOpen]);
 
+  const isUpdaterBusy = updater.isChecking || updater.isDownloading;
+
   return (
     <div className="flex-1 bg-slate-50 relative flex flex-col h-full overflow-visible">
       {/* Toolbar */}
@@ -319,8 +321,8 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
                     disabled={updater.isChecking || updater.isDownloading}
                     className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-3 transition-colors"
                   >
-                    <div className={`w-5 h-5 flex items-center justify-center ${updater.isChecking || updater.isDownloading ? 'animate-spin text-blue-600' : ''}`}>
-                      <RefreshIcon />
+                    <div className={`w-5 h-5 flex items-center justify-center ${isUpdaterBusy ? 'text-blue-600' : ''}`}>
+                      <RefreshIcon className={isUpdaterBusy ? 'animate-spin' : ''} />
                     </div>
                     <div className="flex-1 overflow-hidden">
                       <div className="truncate">{updater.updateAvailable ? t('toolbar.installUpdate') : t('toolbar.checkUpdates')}</div>
