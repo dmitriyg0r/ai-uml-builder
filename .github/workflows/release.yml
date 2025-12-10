@@ -40,6 +40,25 @@ jobs:
       - name: install frontend dependencies
         run: npm install
 
+      - name: Get version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        shell: bash
+
+      - name: Read release notes
+        id: read_release_notes
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          NOTES_FILE="RELEASE_NOTES_v${VERSION}.md"
+          if [ -f "$NOTES_FILE" ]; then
+            echo "RELEASE_BODY<<EOF" >> $GITHUB_ENV
+            cat "$NOTES_FILE" >> $GITHUB_ENV
+            echo "EOF" >> $GITHUB_ENV
+          else
+            echo "RELEASE_BODY=See the assets to download this version and install." >> $GITHUB_ENV
+          fi
+        shell: bash
+
       - uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -48,7 +67,7 @@ jobs:
         with:
           tagName: app-v__VERSION__ # Тег релиза (будет заменено автоматически)
           releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download this version and install.'
+          releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
