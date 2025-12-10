@@ -42,7 +42,10 @@ jobs:
 
       - name: Get version from tag
         id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_ENV
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
         shell: bash
 
       - name: Read release notes
@@ -60,14 +63,33 @@ jobs:
         shell: bash
 
       - uses: tauri-apps/tauri-action@v0
+        id: tauri
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
-          tagName: app-v__VERSION__ # Тег релиза (будет заменено автоматически)
+          tagName: app-v__VERSION__
           releaseName: 'App v__VERSION__'
           releaseBody: ${{ env.RELEASE_BODY }}
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      - name: Generate latest.json
+        run: node scripts/generate-latest.mjs
+        env:
+          VERSION: ${{ steps.get_version.outputs.VERSION }}
+          RELEASE_BODY: ${{ env.RELEASE_BODY }}
+        shell: bash
+
+      - name: Upload latest.json
+        if: hashFiles('latest.json') != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # We upload to the tag created by tauri-action (app-v...) or user tag?
+          # tauri-action uses app-v__VERSION__.
+          # We need to target the same tag.
+          TAG_NAME="app-v${{ steps.get_version.outputs.VERSION }}"
+          gh release upload $TAG_NAME latest.json --clobber
