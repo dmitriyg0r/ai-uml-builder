@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { LoadingSpinner } from '../LoadingSpinner';
 import { 
   CopyIcon, DownloadIcon, TrashIcon, UserIcon, RefreshIcon, 
-  SettingsIcon 
+  SettingsIcon,
+  SunIcon,
+  MoonIcon
 } from '../Icons';
 
 // Lazy load MermaidRenderer
@@ -25,6 +27,8 @@ interface DiagramWorkspaceProps {
   onShowAuth: () => void;
   onSignOut: () => void;
   onError: (err: string | null) => void;
+  theme: 'light' | 'dark';
+  onToggleTheme: () => void;
   updater: {
     isChecking: boolean;
     updateAvailable: boolean;
@@ -50,6 +54,8 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
   onShowAuth,
   onSignOut,
   onError,
+  theme,
+  onToggleTheme,
   updater,
 }) => {
   const { t, i18n } = useTranslation();
@@ -59,6 +65,7 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [exportMenuPos, setExportMenuPos] = useState({ top: 0, left: 0, width: 192 });
+  const isDarkTheme = theme === 'dark';
 
   const exportTriggerRef = useRef<HTMLDivElement>(null);
   const exportButtonRef = useRef<HTMLButtonElement>(null);
@@ -304,6 +311,20 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
                         })}
                       </div>
                       <div className="text-[11px] text-slate-400">{t('settings.languageHint')}</div>
+                      <div className="pt-2 space-y-2">
+                        <div className="text-xs text-slate-400">{t('settings.theme')}</div>
+                        <button
+                          onClick={onToggleTheme}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg border border-slate-200 text-slate-600 hover:border-blue-200 hover:text-blue-700 transition-colors bg-white"
+                        >
+                          <span className="w-6 h-6 flex items-center justify-center rounded-md bg-slate-100 text-slate-600">
+                            {isDarkTheme ? <MoonIcon /> : <SunIcon />}
+                          </span>
+                          <span className="flex-1 text-left">
+                            {isDarkTheme ? t('settings.themeDark') : t('settings.themeLight')}
+                          </span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -365,6 +386,7 @@ export const DiagramWorkspace: React.FC<DiagramWorkspaceProps> = ({
             <MermaidRenderer
               code={renderedCode}
               onError={onError}
+              theme={theme}
             />
           </Suspense>
         </div>

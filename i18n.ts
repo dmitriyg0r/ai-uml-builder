@@ -142,6 +142,9 @@ const resources = {
       settings: {
         language: 'Interface language',
         languageHint: 'Choose your preferred language',
+        theme: 'Theme',
+        themeLight: 'Light theme',
+        themeDark: 'Dark theme',
       },
       languages: {
         en: 'English',
@@ -289,6 +292,9 @@ const resources = {
       settings: {
         language: 'Язык интерфейса',
         languageHint: 'Выберите предпочтительный язык',
+        theme: 'Тема',
+        themeLight: 'Светлая тема',
+        themeDark: 'Тёмная тема',
       },
       languages: {
         en: 'English',

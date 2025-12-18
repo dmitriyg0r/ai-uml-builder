@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 interface MermaidRendererProps {
   code: string;
   onError?: (error: string) => void;
+  theme: 'light' | 'dark';
 }
 
 // Control Icons
@@ -22,7 +23,7 @@ const ResetIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>
 );
 
-const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onError }) => {
+const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onError, theme }) => {
   const { t } = useTranslation();
   const [svg, setSvg] = useState<string>('');
   const [isRendering, setIsRendering] = useState(false);
@@ -33,12 +34,25 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
   useEffect(() => {
     mermaid.initialize({
       startOnLoad: false,
-      theme: 'neutral',
+      theme: theme === 'dark' ? 'dark' : 'neutral',
+      themeVariables: theme === 'dark'
+        ? {
+            background: '#0b1220',
+            primaryColor: '#1f2937',
+            primaryTextColor: '#f8fafc',
+            secondaryColor: '#111827',
+            tertiaryColor: '#0f172a',
+            lineColor: '#94a3b8',
+            edgeLabelBackground: '#0b1220',
+            noteBkgColor: '#111827',
+            noteTextColor: '#f8fafc',
+          }
+        : {},
       securityLevel: 'loose',
       fontFamily: 'Inter, sans-serif',
       logLevel: 'error',
     });
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     let cancelled = false;
@@ -115,7 +129,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
     return () => {
       cancelled = true;
     };
-  }, [code, onError, t]);
+  }, [code, onError, t, theme]);
 
   if (isRendering) {
     return (
@@ -135,7 +149,7 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
   }
 
   return (
-    <div ref={containerRef} className="w-full h-full relative overflow-hidden bg-white rounded-lg">
+    <div ref={containerRef} className="diagram-surface w-full h-full relative overflow-hidden bg-white rounded-lg">
       <TransformWrapper
         key={resetKey}
         initialScale={initialScale}
@@ -188,8 +202,8 @@ const MermaidRenderer: React.FC<MermaidRendererProps> = React.memo(({ code, onEr
     </div>
   );
 }, (prevProps, nextProps) => {
-  // Only re-render if code actually changed
-  return prevProps.code === nextProps.code;
+  // Only re-render if code or theme actually changed
+  return prevProps.code === nextProps.code && prevProps.theme === nextProps.theme;
 });
 
 MermaidRenderer.displayName = 'MermaidRenderer';

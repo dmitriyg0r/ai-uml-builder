@@ -28,6 +28,17 @@ const createId = () =>
     : Date.now().toString(36);
 
 const EMPTY_MESSAGES: ChatMessage[] = [];
+type ThemeMode = 'light' | 'dark';
+
+const getInitialTheme = (): ThemeMode => {
+  if (typeof window === 'undefined') return 'light';
+  const storedTheme = localStorage.getItem('ui:theme');
+  if (storedTheme === 'light' || storedTheme === 'dark') {
+    return storedTheme;
+  }
+  const prefersDark = window.matchMedia?.('(prefers-color-scheme: dark)').matches;
+  return prefersDark ? 'dark' : 'light';
+};
 
 const App: React.FC = () => {
   const { t, i18n } = useTranslation();
@@ -52,6 +63,7 @@ const App: React.FC = () => {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [chatToDelete, setChatToDelete] = useState<string | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
   
   const guestRequestLimit = 3;
   const [guestRequestCount, setGuestRequestCount] = useState(() => {
@@ -62,6 +74,17 @@ const App: React.FC = () => {
   const { user, signOut } = useAuth();
   
   const updater = useUpdater();
+  const toggleTheme = useCallback(() => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  }, []);
+
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    root.classList.toggle('theme-dark', theme === 'dark');
+    root.style.colorScheme = theme;
+    localStorage.setItem('ui:theme', theme);
+  }, [theme]);
 
   // Memoize setError to prevent re-renders
   const handleError = useCallback((err: string | null) => {
@@ -340,6 +363,8 @@ const App: React.FC = () => {
         onSignOut={signOut}
         onError={handleError}
         updater={updater}
+        theme={theme}
+        onToggleTheme={toggleTheme}
       />
 
       {/* Backdrop for mobile sidebar */}
