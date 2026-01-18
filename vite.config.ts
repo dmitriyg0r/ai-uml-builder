@@ -33,7 +33,15 @@ export default defineConfig(({ mode }) => {
         sourcemap: false,
         rollupOptions: {
           output: {
-            manualChunks: undefined,
+            manualChunks: {
+              // Split vendor chunks for better caching
+              'vendor-react': ['react', 'react-dom', 'react-i18next'],
+              'vendor-mermaid': ['mermaid'],
+              'vendor-prism': ['prismjs'],
+              'vendor-zoom': ['react-zoom-pan-pinch'],
+              'vendor-supabase': ['@supabase/supabase-js'],
+              'vendor-openai': ['openai'],
+            },
           },
         },
       },

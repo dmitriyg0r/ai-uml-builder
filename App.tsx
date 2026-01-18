@@ -107,17 +107,67 @@ const App: React.FC = () => {
     () => activeChat?.messages ?? EMPTY_MESSAGES,
     [activeChat?.id, activeChat?.messages]
   );
-  const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode, 300);
+  const { debouncedValue: renderedCode, isDebouncing, flush } = useDebouncedValue(currentCode);
 
   const [copyState, setCopyState] = useState<'idle' | 'copied'>('idle');
 
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const { exportDiagram } = useDiagramExport({ setError });
-  
+
   const hasDiagram = Boolean(renderedCode.trim());
   const hasHistory = messages.length > 0;
   const canReset = Boolean(currentCode || prompt || hasHistory);
+
+  const handleCopyCode = useCallback(async () => {
+    const codeToCopy = renderedCode || currentCode;
+    if (!codeToCopy.trim()) return;
+
+    try {
+      await navigator.clipboard.writeText(codeToCopy);
+      setCopyState('copied');
+      setTimeout(() => setCopyState('idle'), 1500);
+    } catch (err) {
+      console.error(err);
+      setError(t('chat.copyError'));
+    }
+  }, [renderedCode, currentCode, t]);
+
+  // Memoize diagram properties to prevent unnecessary re-renders
+  const diagramProps = useMemo(() => ({
+    isSidebarOpen,
+    onOpenSidebar: () => setIsSidebarOpen(true),
+    renderedCode,
+    isDebouncing,
+    hasDiagram,
+    canReset,
+    onCopy: handleCopyCode,
+    copyState,
+    onExport: exportDiagram,
+    onReset: () => setIsResetModalOpen(true),
+    user,
+    onShowAuth: () => setIsAuthModalOpen(true),
+    onSignOut: signOut,
+    onError: handleError,
+    updater,
+    theme,
+    onToggleTheme: toggleTheme
+  }), [
+    isSidebarOpen,
+    renderedCode,
+    isDebouncing,
+    hasDiagram,
+    canReset,
+    handleCopyCode,
+    copyState,
+    exportDiagram,
+    user,
+    signOut,
+    handleError,
+    updater,
+    theme,
+    toggleTheme
+  ]);
 
   // Синхронизация лимита запросов для гостя
   useEffect(() => {
@@ -224,20 +274,6 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, []);
-
-  const handleCopyCode = useCallback(async () => {
-    const codeToCopy = renderedCode || currentCode;
-    if (!codeToCopy.trim()) return;
-
-    try {
-      await navigator.clipboard.writeText(codeToCopy);
-      setCopyState('copied');
-      setTimeout(() => setCopyState('idle'), 1500);
-    } catch (err) {
-      console.error(err);
-      setError(t('chat.copyError'));
-    }
-  }, [renderedCode, currentCode, t]);
 
   const confirmReset = useCallback(() => {
     clearCurrentChat();
@@ -347,25 +383,7 @@ const App: React.FC = () => {
         }
       />
 
-      <DiagramWorkspace 
-        isSidebarOpen={isSidebarOpen}
-        onOpenSidebar={() => setIsSidebarOpen(true)}
-        renderedCode={renderedCode}
-        isDebouncing={isDebouncing}
-        hasDiagram={hasDiagram}
-        canReset={canReset}
-        onCopy={handleCopyCode}
-        copyState={copyState}
-        onExport={exportDiagram}
-        onReset={() => setIsResetModalOpen(true)}
-        user={user}
-        onShowAuth={() => setIsAuthModalOpen(true)}
-        onSignOut={signOut}
-        onError={handleError}
-        updater={updater}
-        theme={theme}
-        onToggleTheme={toggleTheme}
-      />
+      <DiagramWorkspace {...diagramProps} />
 
       {/* Backdrop for mobile sidebar */}
       {isSidebarOpen && (

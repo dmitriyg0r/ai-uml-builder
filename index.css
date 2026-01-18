@@ -31,6 +31,10 @@ body {
   background: radial-gradient(circle at 20% 20%, rgba(59, 130, 246, 0.08), transparent 28%),
               radial-gradient(circle at 80% 0%, rgba(124, 58, 237, 0.08), transparent 25%),
               linear-gradient(180deg, #f8fafc 0%, #f1f5f9 40%, #f8fafc 100%);
+  /* Improve rendering performance */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 #root {
