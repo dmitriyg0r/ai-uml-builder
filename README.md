@@ -70,7 +70,7 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 - **Offline Editing** - Edit diagrams without internet (generation requires API)
 - **Native Performance** - Built with Tauri for blazing-fast, lightweight experience
 - **Tiny Size** - Only 4.9 MB DMG (96% smaller than Electron!)
-- **User Authentication** - Save and sync your diagrams with Supabase
+- **User Authentication** - Save and sync your diagrams with self-hosted API
 - **Multi-Language Interface** - Full support for English and Russian (auto-detected)
 
 ### 🎨 Professional Editing Tools
@@ -82,7 +82,7 @@ AI UML Builder is a **powerful desktop application** that converts natural langu
 
 ### 🔐 Privacy & Security
 - **Guest Mode** - Try without registration (3 AI requests)
-- **Secure Auth** - Optional Supabase authentication
+- **Secure Auth** - Optional self-hosted authentication
 - **Local Storage** - Your data stays on your device in guest mode
 - **API Key Safety** - Environment variables for sensitive data
 - **Data Migration** - Seamless migration from guest to authenticated mode
@@ -278,7 +278,7 @@ ai-uml-builder/
 │   └── useDebouncedValue.ts
 ├── services/            # External integrations
 │   ├── aisetService.ts # Polza AI API
-│   └── supabaseClient.ts # Database connection
+│   └── apiClient.ts # Self-hosted API client
 ├── src-tauri/           # Tauri backend (Rust)
 │   ├── src/            # Rust source code
 │   ├── icons/          # App icons
@@ -304,8 +304,7 @@ ai-uml-builder/
 
 ### Backend Services
 - 🤖 **Polza AI** - DeepSeek AI integration
-- 🗄️ **Supabase** - Authentication and database
-- 🔐 **Row Level Security** - Data protection
+- 🗄️ **Self-hosted API** - Authentication and database
 
 ## 📜 Available Scripts
 
@@ -348,7 +347,7 @@ Every star, share, and contribution helps make this project better! 🙏
 ### ✅ Completed
 - [x] AI-powered diagram generation
 - [x] Multi-chat support with history
-- [x] User authentication (Supabase)
+- [x] User authentication (self-hosted)
 - [x] Export to PNG/SVG
 - [x] Syntax-highlighted code editor
 - [x] Guest mode (3 free requests)
