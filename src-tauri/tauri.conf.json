@@ -1,6 +1,6 @@
 {
   "productName": "AI UML Builder",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "identifier": "com.aiumlbuilder.desktop",
   "build": {
     "beforeDevCommand": "vite --port 3000",
