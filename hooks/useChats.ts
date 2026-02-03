@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '../services/supabaseClient';
 import { useAuth } from './useAuth';
 import { Chat, ChatMessage } from '../types';
 import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { apiFetch } from '../services/apiClient';
 
 interface LocalChat {
   id: string;
@@ -99,8 +99,8 @@ const loadGuestState = (defaultName: string): { chats: Chat[]; activeChatId: str
   };
 };
 
-// Миграция старых данных из localStorage в Supabase
-const migrateLocalStorageData = async (userId: string): Promise<void> => {
+// Миграция старых данных из localStorage в API
+const migrateLocalStorageData = async (): Promise<void> => {
   try {
     const chatsStateRaw = localStorage.getItem('chats:state');
     const oldCode = localStorage.getItem('uml:code');
@@ -129,26 +129,27 @@ const migrateLocalStorageData = async (userId: string): Promise<void> => {
       });
     }
     
-    // Загружаем чаты в Supabase
+    // Загружаем чаты в API
     if (chatsToMigrate.length > 0) {
       const migratedChats = chatsToMigrate.map((chat) => ({
-        id: crypto.randomUUID(), // Новый ID для Supabase
-        user_id: userId,
         name: chat.name,
         messages: chat.messages,
         code: chat.code,
         created_at: new Date(chat.createdAt).toISOString(),
         updated_at: new Date(chat.updatedAt).toISOString(),
       }));
-      
-      await supabase.from('chats').insert(migratedChats);
+
+      await apiFetch('/chats/import', {
+        method: 'POST',
+        body: JSON.stringify({ chats: migratedChats }),
+      });
       
       // Очищаем localStorage
       localStorage.removeItem('chats:state');
       localStorage.removeItem('uml:code');
       localStorage.removeItem('uml:messages');
       
-      console.log(`Migrated ${migratedChats.length} chats to Supabase`);
+      console.log(`Migrated ${migratedChats.length} chats to API`);
     }
   } catch (error) {
     console.error('Error migrating localStorage data:', error);
@@ -197,21 +198,12 @@ export const useChats = () => {
       try {
         setLoading(true);
         console.log('[useChats] Starting to load chats for user:', user.id);
-        
+
         // Мигрируем данные из localStorage (если есть)
-        await migrateLocalStorageData(user.id);
+        await migrateLocalStorageData();
         
         // Загружаем чаты
-        const { data, error: fetchError } = await supabase
-          .from('chats')
-          .select('*')
-          .eq('user_id', user.id)
-          .order('updated_at', { ascending: false });
-        
-        if (fetchError) {
-            console.error('[useChats] Supabase fetch error:', fetchError);
-            throw fetchError;
-        }
+        const data = await apiFetch('/chats');
 
         console.log('[useChats] Loaded chats:', data?.length);
         
@@ -221,22 +213,14 @@ export const useChats = () => {
         } else {
           console.log('[useChats] No chats found, creating default.');
           // Создаем первый чат
-          const { data: newChatData, error: createError } = await supabase
-            .from('chats')
-            .insert({
-              user_id: user.id,
+          const newChatData = await apiFetch('/chats', {
+            method: 'POST',
+            body: JSON.stringify({
               name: t('sidebar.newChat'),
-              messages: [],
-              code: '',
-            })
-            .select()
-            .single();
-          
-          if (createError) throw createError;
-          if (newChatData) {
-            setChats([newChatData]);
-            setActiveChatId(newChatData.id);
-          }
+            }),
+          });
+          setChats([newChatData]);
+          setActiveChatId(newChatData.id);
         }
       } catch (err) {
         console.error('[useChats] Error loading chats:', err);
@@ -278,18 +262,12 @@ export const useChats = () => {
       }
       
       try {
-        const { data, error } = await supabase
-          .from('chats')
-          .insert({
-            user_id: user.id,
+        const data = await apiFetch('/chats', {
+          method: 'POST',
+          body: JSON.stringify({
             name: customName || t('sidebar.newChat'),
-            messages: [],
-            code: '',
-          })
-          .select()
-          .single();
-        
-        if (error) throw error;
+          }),
+        });
         if (data) {
           setChats((prev) => [data, ...prev]);
           setActiveChatId(data.id);
@@ -347,13 +325,7 @@ export const useChats = () => {
     }
     
     try {
-      const { error } = await supabase
-        .from('chats')
-        .delete()
-        .eq('id', chatId)
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
+      await apiFetch(`/chats/${chatId}`, { method: 'DELETE' });
       
       const newChats = chats.filter((chat) => chat.id !== chatId);
       setChats(newChats);
@@ -382,20 +354,17 @@ export const useChats = () => {
           return updated;
         });
         return;
-      }
+    }
       
-      try {
-        const { error } = await supabase
-          .from('chats')
-          .update({ name: newName })
-          .eq('id', chatId)
-          .eq('user_id', user.id);
+    try {
+      await apiFetch(`/chats/${chatId}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ name: newName }),
+      });
         
-        if (error) throw error;
-        
-        setChats((prev) =>
-          prev.map((chat) =>
-            chat.id === chatId
+      setChats((prev) =>
+        prev.map((chat) =>
+          chat.id === chatId
               ? { ...chat, name: newName, updated_at: new Date().toISOString() }
               : chat
           )
@@ -434,13 +403,10 @@ export const useChats = () => {
           return;
         }
 
-        const { error } = await supabase
-          .from('chats')
-          .update({ messages })
-          .eq('id', chatId)
-          .eq('user_id', user.id);
-
-        if (error) throw error;
+        await apiFetch(`/chats/${chatId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ messages }),
+        });
 
         setChats((prev) =>
           prev.map((chat) =>
@@ -479,13 +445,10 @@ export const useChats = () => {
         const targetChat = chats.find((chat) => chat.id === chatId);
         if (targetChat?.code === code) return;
 
-        const { error } = await supabase
-          .from('chats')
-          .update({ code })
-          .eq('id', chatId)
-          .eq('user_id', user.id);
-
-        if (error) throw error;
+        await apiFetch(`/chats/${chatId}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ code }),
+        });
 
         setChats((prev) =>
           prev.map((chat) =>
@@ -519,13 +482,10 @@ export const useChats = () => {
     }
     
     try {
-      const { error } = await supabase
-        .from('chats')
-        .update({ messages: [], code: '' })
-        .eq('id', activeChat.id)
-        .eq('user_id', user.id);
-      
-      if (error) throw error;
+      await apiFetch(`/chats/${activeChat.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ messages: [], code: '' }),
+      });
       
       setChats((prev) =>
         prev.map((chat) =>
@@ -569,11 +529,10 @@ export const useChats = () => {
         
         if (chatsToUpdate.length > 0) {
           const updates = chatsToUpdate.map((chat) =>
-            supabase
-              .from('chats')
-              .update({ name: defaultName })
-              .eq('id', chat.id)
-              .eq('user_id', user.id)
+            apiFetch(`/chats/${chat.id}`, {
+              method: 'PATCH',
+              body: JSON.stringify({ name: defaultName }),
+            })
           );
           
           await Promise.all(updates);

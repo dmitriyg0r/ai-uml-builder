@@ -23,7 +23,10 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onSuccess, onSwitchToRegis
     try {
       const { error } = await signIn(email, password);
       if (error) {
-        if (error.message.includes('Invalid login credentials')) {
+        if (
+          error.message.includes('Invalid credentials') ||
+          error.message.includes('Invalid email or password')
+        ) {
           setError(t('auth.loginError'));
         } else {
           setError(error.message);

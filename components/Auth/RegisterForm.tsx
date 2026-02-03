@@ -36,7 +36,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess, onSwitchT
     try {
       const { error } = await signUp(email, password);
       if (error) {
-        if (error.message.includes('already registered')) {
+        if (error.message.includes('already exists')) {
           setError(t('auth.registerErrorExists'));
         } else {
           setError(error.message);

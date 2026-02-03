@@ -33,8 +33,8 @@ export interface Chat {
   name: string;
   messages: ChatMessage[];
   code: string;
-  created_at: string; // ISO timestamp from Supabase
-  updated_at: string; // ISO timestamp from Supabase
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
 }
 
 export interface ChatState {
