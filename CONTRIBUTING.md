@@ -94,8 +94,7 @@ Use clear commit messages:
 3. Create `.env.local` file:
    ```env
    VITE_POLZA_API_KEY=your_api_key
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_key
+   VITE_API_URL=http://localhost:3010
    ```
 
 4. Run dev server:

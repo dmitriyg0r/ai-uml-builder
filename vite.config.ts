@@ -40,7 +40,6 @@ export default defineConfig(({ mode }) => {
               'vendor-mermaid': ['mermaid'],
               'vendor-prism': ['prismjs'],
               'vendor-zoom': ['react-zoom-pan-pinch'],
-              'vendor-supabase': ['@supabase/supabase-js'],
               'vendor-openai': ['openai'],
             },
           },
