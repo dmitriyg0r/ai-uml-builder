@@ -1,17 +1,4 @@
-const resolveApiUrl = () => {
-  const configuredUrl = import.meta.env.VITE_API_URL?.trim();
-  if (configuredUrl) {
-    return configuredUrl.replace(/\/+$/, '');
-  }
-
-  if (typeof window !== 'undefined' && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
-    return window.location.origin.replace(/\/+$/, '');
-  }
-
-  return 'http://localhost:3001';
-};
-
-export const API_URL = resolveApiUrl();
+export const API_URL = 'http://46.138.243.148:3010';
 
 const TOKEN_KEY = 'auth:token';
 
@@ -78,6 +65,15 @@ export const apiFetch = async (path: string, options: RequestInit = {}) => {
   if (!response.ok) {
     const message = payload?.error || response.statusText || 'Request failed';
     throw new ApiError(message, response.status, payload);
+  }
+
+  const contentType = response.headers.get('content-type') || '';
+  if (typeof payload === 'string' && contentType.includes('text/html')) {
+    throw new ApiError(
+      `Unexpected HTML response from ${API_URL}${path}. Check VITE_API_URL configuration.`,
+      response.status,
+      payload
+    );
   }
 
   return payload;

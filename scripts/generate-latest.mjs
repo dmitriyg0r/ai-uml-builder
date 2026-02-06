@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 
-const ARTIFACTS_DIR = 'src-tauri/target/release/bundle';
+const TARGET_DIR = 'src-tauri/target';
 const VERSION = process.env.VERSION?.replace(/^v/, '');
 const NOTES = process.env.RELEASE_BODY || 'Update available.';
 // Release assets are published under the app-v__VERSION__ tag (see release.yml)
@@ -66,11 +66,11 @@ async function main() {
   if (process.platform === 'win32') searchExt = '.zip'; // nsis updater default
   if (process.platform === 'linux') searchExt = '.AppImage.tar.gz';
 
-  const files = walkFiles(ARTIFACTS_DIR);
+  const files = walkFiles(TARGET_DIR).filter((f) => f.includes(`${path.sep}release${path.sep}bundle${path.sep}`));
   const sigFile = files.find((f) => f.endsWith(`${searchExt}.sig`));
 
   if (!sigFile) {
-    console.error(`No signature file found for ${searchExt}.sig under ${ARTIFACTS_DIR}`);
+    console.error(`No signature file found for ${searchExt}.sig under ${TARGET_DIR}`);
     console.log('Files found:', files);
     process.exit(1);
   }

@@ -1,6 +1,6 @@
 {
   "productName": "AI UML Builder",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "identifier": "com.aiumlbuilder.desktop",
   "build": {
     "beforeDevCommand": "vite --port 3000",
@@ -44,7 +44,7 @@
     "macOS": {
       "minimumSystemVersion": "10.13",
       "frameworks": [],
-      "exceptionDomain": ""
+      "exceptionDomain": "46.138.243.148"
     }
   }
 }
