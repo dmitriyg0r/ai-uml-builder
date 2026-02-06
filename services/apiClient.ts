@@ -1,4 +1,17 @@
-export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+const resolveApiUrl = () => {
+  const configuredUrl = import.meta.env.VITE_API_URL?.trim();
+  if (configuredUrl) {
+    return configuredUrl.replace(/\/+$/, '');
+  }
+
+  if (typeof window !== 'undefined' && (window.location.protocol === 'http:' || window.location.protocol === 'https:')) {
+    return window.location.origin.replace(/\/+$/, '');
+  }
+
+  return 'http://localhost:3001';
+};
+
+export const API_URL = resolveApiUrl();
 
 const TOKEN_KEY = 'auth:token';
 
@@ -40,10 +53,17 @@ export const apiFetch = async (path: string, options: RequestInit = {}) => {
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${API_URL}${path}`, {
-    ...options,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_URL}${path}`, {
+      ...options,
+      headers,
+    });
+  } catch (error) {
+    const rawMessage = error instanceof Error ? error.message : 'Network request failed';
+    const message = `Network error while calling ${API_URL}${path}: ${rawMessage}`;
+    throw new ApiError(message, 0, { cause: rawMessage });
+  }
 
   const text = await response.text();
   let payload: any = null;

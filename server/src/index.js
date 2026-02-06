@@ -26,6 +26,8 @@ fastify.decorate('authenticate', async (request, reply) => {
 });
 
 fastify.get('/health', async () => ({ status: 'ok' }));
+fastify.get('/', async () => ({ status: 'ok', service: 'ai-uml-builder-server' }));
+fastify.get('/favicon.ico', async (_request, reply) => reply.code(204).send());
 
 fastify.register(authRoutes, { prefix: '/auth' });
 fastify.register(chatRoutes, { prefix: '/chats' });
